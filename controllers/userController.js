@@ -1,6 +1,7 @@
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const { getAssetBalance, transferAsset } = require("../utils/algoUtils");
 
 /**
  * Creates a user in the USSD system and their corresponding wallet
@@ -11,11 +12,6 @@ const User = require("../models/userModel");
  */
 async function createUser(username, phoneNumber, pin) {
   const startTime = Date.now();
-  console.log("[createUser] Starting user creation process", {
-    username,
-    phoneNumber,
-    timestamp: new Date().toISOString(),
-  });
 
   // Input validation
   if (!username || !phoneNumber || !pin) {
@@ -29,9 +25,6 @@ async function createUser(username, phoneNumber, pin) {
   const baseUrl = process.env.WALLET_API_URL.endsWith("/")
     ? process.env.WALLET_API_URL.slice(0, -1)
     : process.env.WALLET_API_URL;
-
-  console.log("[createUser] Using wallet API URL:", baseUrl);
-
   try {
     const requestConfig = {
       method: "post",
@@ -42,12 +35,6 @@ async function createUser(username, phoneNumber, pin) {
       },
       timeout: 30000, // 30 seconds
     };
-
-    console.log("[createUser] Making wallet API request", {
-      url: requestConfig.url,
-      method: requestConfig.method,
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
 
     const walletApiResponse = await axios(requestConfig).catch((error) => {
       console.error("[createUser] Axios request failed", {
@@ -63,13 +50,6 @@ async function createUser(username, phoneNumber, pin) {
       throw error;
     });
 
-    console.log("[createUser] Received wallet API response", {
-      status: walletApiResponse?.status,
-      hasAddress: Boolean(walletApiResponse?.data?.address),
-      hasWalletId: Boolean(walletApiResponse?.data?.walletID),
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
-
     if (
       !walletApiResponse?.data?.address ||
       !walletApiResponse?.data?.walletID
@@ -78,20 +58,12 @@ async function createUser(username, phoneNumber, pin) {
         "Invalid wallet API response: Missing required wallet data"
       );
     }
-
-    console.log("[createUser] Creating user in database");
     const user = await User.create({
       username,
       phoneNumber,
       pin,
       walletAddress: walletApiResponse.data.address,
       walletID: walletApiResponse.data.walletID,
-    });
-
-    console.log("[createUser] User created successfully", {
-      username: user.username,
-      walletAddress: user.walletAddress,
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
     });
 
     return {
@@ -113,4 +85,37 @@ async function createUser(username, phoneNumber, pin) {
     throw error;
   }
 }
-module.exports = { createUser };
+
+const getUserBalance = async (phoneNumber) => {
+  const user = await User.findOne({ phoneNumber });
+  const balance = await getAssetBalance(
+    user.walletAddress,
+    Number(process.env.USDC_ASSET_ID)
+  );
+
+  return balance;
+};
+
+const transfer = async (from, to, amount) => {
+  const sender = await User.findOne({ phoneNumber: from });
+  const receiver = await User.findOne({ phoneNumber: to });
+  const note = `Transfer from ${sender.username} to ${receiver.username} on ussdapp.com`;
+  const txn = await transferAsset(
+    sender.walletAddress,
+    receiver.walletAddress,
+    Number(process.env.USDC_ASSET_ID),
+    amount,
+    sender.walletID,
+    note
+  );
+  return txn;
+};
+
+const checkUserExists = async (phoneNumber) => {
+  const user = await User.findOne({ phoneNumber });
+  if (!user) {
+    return false;
+  }
+  return user;
+};
+module.exports = { createUser, getUserBalance, transfer, checkUserExists };

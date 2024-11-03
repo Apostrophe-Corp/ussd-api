@@ -963,20 +963,9 @@ async function sendGroupedNFDTransactions(transactions, key) {
   return { confirmedTransactions, failedTransactions };
 }
 
-// Utility to generate JWT token for wallet API
-const generateWalletApiToken = () => {
-  return jwt.sign(
-    { clientId: process.env.MAIN_API_CLIENT_ID },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
-  );
-};
-
 // Utility to sign transactions via wallet management API
 const signTransactionWithWalletApi = async (walletId, transaction) => {
   try {
-    const token = generateWalletApiToken();
-
     const response = await axios.post(
       `${process.env.WALLET_API_URL}/sign-transaction`,
       {
@@ -985,7 +974,6 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       }

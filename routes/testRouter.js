@@ -1,5 +1,9 @@
 const express = require("express");
-const { createUser } = require("../controllers/userController");
+const {
+  createUser,
+  getUserBalance,
+  transfer,
+} = require("../controllers/userController");
 const catchAsync = require("../utils/catchAsync");
 const router = express.Router();
 

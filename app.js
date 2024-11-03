@@ -15,6 +15,7 @@ const globalErrorHandler = require("./controllers/errorController");
 const { morganErrorMiddleware } = require("./middleware/logger");
 const { isValidEndpoint } = require("./utils/utils");
 const TestRouter = require("./routes/testRouter");
+const UssdRouter = require("./routes/ussdRouter");
 
 const app = express();
 
@@ -23,15 +24,15 @@ app.enable("trust proxy");
 app.set("view engine", "ejs");
 
 // Set up CORS
-app.use(
-  cors({
-    origin: ["https://www.viewreward.app"],
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: ["https://www.viewreward.app"],
+//     credentials: true,
+//   })
+// );
 
 // Handle preflight requests
-app.options("*", cors());
+// app.options("*", cors());
 
 // 1) GLOBAL MIDDLEWARES
 // Set security HTTP headers
@@ -66,7 +67,7 @@ app.use(
   })
 );
 
-const validEndpoints = ["/api/v1/test"];
+const validEndpoints = ["/api/v1/test", "/api/v1/ussd"];
 
 const validateEndpoint = (req, res, next) => {
   const requestedEndpoint = req.path;
@@ -95,6 +96,7 @@ app.use(morganErrorMiddleware);
 
 // 3) ROUTES
 app.use("/api/v1", TestRouter);
+app.use("/api/v1", UssdRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
