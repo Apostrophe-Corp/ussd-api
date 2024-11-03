@@ -50,6 +50,7 @@ async function createUser(username, phoneNumber, pin) {
     };
   } catch (error) {
     // If wallet creation failed
+    console.log(error);
     if (error.response) {
       throw new Error(
         `Wallet creation failed: ${error.response.data.message || "Unknown error"}`

@@ -5,7 +5,7 @@ const router = express.Router();
 
 const createUserTest = catchAsync(async (req, res, next) => {
   const { username, phoneNumber, pin } = req.body;
-  const user = createUser(username, phoneNumber, pin);
+  const user = await createUser(username, phoneNumber, pin);
   res.status(200).json({
     status: "success",
     user: user,
