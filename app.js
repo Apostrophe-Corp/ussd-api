@@ -14,6 +14,7 @@ const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const { morganErrorMiddleware } = require("./middleware/logger");
 const { isValidEndpoint } = require("./utils/utils");
+const TestRouter = require("./routes/testRouter");
 
 const app = express();
 
@@ -65,9 +66,7 @@ app.use(
   })
 );
 
-const validEndpoints = [
- 
-];
+const validEndpoints = ["/api/v1/test"];
 
 const validateEndpoint = (req, res, next) => {
   const requestedEndpoint = req.path;
@@ -95,7 +94,7 @@ app.use((req, res, next) => {
 app.use(morganErrorMiddleware);
 
 // 3) ROUTES
-app.use("/api/v1", userRouter);
+app.use("/api/v1", TestRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
