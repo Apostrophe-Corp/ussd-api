@@ -10,61 +10,81 @@ const User = require("../models/userModel");
  * @returns {Promise<Object>} Created user object
  */
 async function createUser(username, phoneNumber, pin) {
+  const startTime = Date.now();
+  console.log("[createUser] Starting user creation process", {
+    username,
+    phoneNumber,
+    timestamp: new Date().toISOString(),
+  });
+
   // Input validation
   if (!username || !phoneNumber || !pin) {
+    console.error("[createUser] Missing required parameters", {
+      username,
+      phoneNumber,
+    });
     throw new Error("Missing required parameters");
   }
 
-  console.log("Starting user creation with:", { username, phoneNumber });
-
   // Generate API client token for wallet management API
+  console.log("[createUser] Generating client token");
   const clientToken = jwt.sign(
     {
       clientId: process.env.MAIN_API_CLIENT_ID,
-      // Add any additional claims that might be needed for verification
     },
     process.env.JWT_SECRET,
     { expiresIn: "5m" }
   );
 
-  // Construct the base URL properly
   const baseUrl = process.env.WALLET_API_URL.endsWith("/")
     ? process.env.WALLET_API_URL.slice(0, -1)
     : process.env.WALLET_API_URL;
 
-  try {
-    console.log("Attempting wallet API request...");
+  console.log("[createUser] Using wallet API URL:", baseUrl);
 
+  try {
     const requestConfig = {
       method: "post",
       url: `${baseUrl}/user-wallet`,
       headers: {
         Authorization: `Bearer ${clientToken}`,
         "X-Forwarded-For": process.env.SERVER_IP,
-        "Content-Type": "application/json", // Changed from default urlencoded
+        "Content-Type": "application/json",
       },
+      // Add timeout to prevent hanging requests
+      timeout: 30000, // 30 seconds
     };
 
-    console.log("Request configuration:", {
+    console.log("[createUser] Making wallet API request", {
       url: requestConfig.url,
       method: requestConfig.method,
       headers: {
         ...requestConfig.headers,
-        Authorization: "Bearer [TOKEN HIDDEN]", // Don't log the actual token
+        Authorization: "Bearer [TOKEN HIDDEN]",
       },
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
     });
 
     const walletApiResponse = await axios(requestConfig).catch((error) => {
-      console.error("Axios request failed:", {
+      console.error("[createUser] Axios request failed", {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
         url: error.config?.url,
+        timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+        headers: error.response?.headers,
+        code: error.code,
+        isTimeout: error.code === "ECONNABORTED",
       });
       throw error;
     });
 
-    console.log("Wallet API response:", walletApiResponse?.data);
+    console.log("[createUser] Received wallet API response", {
+      status: walletApiResponse?.status,
+      hasAddress: Boolean(walletApiResponse?.data?.address),
+      hasWalletId: Boolean(walletApiResponse?.data?.walletID),
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
 
     if (
       !walletApiResponse?.data?.address ||
@@ -75,8 +95,7 @@ async function createUser(username, phoneNumber, pin) {
       );
     }
 
-    console.log("Creating user in database...");
-    // Create user in USSD database
+    console.log("[createUser] Creating user in database");
     const user = await User.create({
       username,
       phoneNumber,
@@ -85,7 +104,11 @@ async function createUser(username, phoneNumber, pin) {
       walletID: walletApiResponse.data.walletID,
     });
 
-    console.log("User created successfully");
+    console.log("[createUser] User created successfully", {
+      username: user.username,
+      walletAddress: user.walletAddress,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
 
     return {
       username: user.username,
@@ -94,12 +117,14 @@ async function createUser(username, phoneNumber, pin) {
       walletID: user.walletID,
     };
   } catch (error) {
-    console.error("Error in createUser:", {
+    console.error("[createUser] Error occurred", {
       name: error.name,
       message: error.message,
       isAxiosError: error.isAxiosError,
       response: error.response?.data,
       status: error.response?.status,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+      stack: error.stack,
     });
 
     if (error.isAxiosError) {
