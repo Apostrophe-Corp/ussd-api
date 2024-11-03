@@ -4,7 +4,6 @@ const dotenv = require("dotenv");
 const axios = require("axios");
 const Bottleneck = require("bottleneck");
 const User = require("../models/userModel");
-const BlacklistedWallets = require("../models/blacklistedWalletsModel");
 
 dotenv.config({ path: "./.env" });
 
