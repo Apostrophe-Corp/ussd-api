@@ -17,41 +17,49 @@ async function createUser(username, phoneNumber, pin) {
 
   console.log("Starting user creation with:", { username, phoneNumber });
 
-  // Log environment variables (excluding sensitive data)
-  console.log("Environment check:", {
-    WALLET_API_URL: process.env.WALLET_API_URL,
-    MAIN_API_CLIENT_ID: process.env.MAIN_API_CLIENT_ID,
-    SERVER_IP: process.env.SERVER_IP,
-  });
-
   // Generate API client token for wallet management API
   const clientToken = jwt.sign(
-    { clientId: process.env.MAIN_API_CLIENT_ID },
+    {
+      clientId: process.env.MAIN_API_CLIENT_ID,
+      // Add any additional claims that might be needed for verification
+    },
     process.env.JWT_SECRET,
     { expiresIn: "5m" }
   );
 
+  // Construct the base URL properly
+  const baseUrl = process.env.WALLET_API_URL.endsWith("/")
+    ? process.env.WALLET_API_URL.slice(0, -1)
+    : process.env.WALLET_API_URL;
+
   try {
     console.log("Attempting wallet API request...");
 
-    // Call wallet management API to create wallet
-    const walletApiResponse = await axios({
+    const requestConfig = {
       method: "post",
-      url: `${process.env.WALLET_API_URL}/api/v1/user-wallet`,
+      url: `${baseUrl}/user-wallet`,
       headers: {
         Authorization: `Bearer ${clientToken}`,
         "X-Forwarded-For": process.env.SERVER_IP,
+        "Content-Type": "application/json", // Changed from default urlencoded
       },
-    }).catch((error) => {
+    };
+
+    console.log("Request configuration:", {
+      url: requestConfig.url,
+      method: requestConfig.method,
+      headers: {
+        ...requestConfig.headers,
+        Authorization: "Bearer [TOKEN HIDDEN]", // Don't log the actual token
+      },
+    });
+
+    const walletApiResponse = await axios(requestConfig).catch((error) => {
       console.error("Axios request failed:", {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-        },
+        url: error.config?.url,
       });
       throw error;
     });
@@ -77,12 +85,7 @@ async function createUser(username, phoneNumber, pin) {
       walletID: walletApiResponse.data.walletID,
     });
 
-    console.log("User created successfully:", {
-      username: user.username,
-      phoneNumber: user.phoneNumber,
-      walletAddress: user.walletAddress,
-      walletID: user.walletID,
-    });
+    console.log("User created successfully");
 
     return {
       username: user.username,
@@ -100,24 +103,19 @@ async function createUser(username, phoneNumber, pin) {
     });
 
     if (error.isAxiosError) {
-      // Handle network or axios specific errors
-      if (!error.response) {
-        throw new Error(`Network error: ${error.message}`);
+      if (error.response?.status === 403) {
+        throw new Error(
+          "Authorization failed with wallet API. Please check MAIN_API_CLIENT_ID, JWT_SECRET, and SERVER_IP"
+        );
       }
       throw new Error(
-        `Wallet API error (${error.response.status}): ${
-          error.response.data.message || error.message
+        `Wallet API error (${error.response?.status}): ${
+          error.response?.data?.message || error.message
         }`
       );
     }
 
-    // Handle mongoose errors
-    if (error.name === "ValidationError") {
-      throw new Error(`Database validation error: ${error.message}`);
-    }
-
-    // Re-throw other errors with more context
-    throw new Error(`User creation failed: ${error.message}`);
+    throw error;
   }
 }
 
