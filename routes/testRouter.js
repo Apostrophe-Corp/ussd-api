@@ -1,13 +1,17 @@
 const express = require("express");
+const { createUser } = require("../controllers/userController");
+const catchAsync = require("../utils/catchAsync");
 const router = express.Router();
 
-const test = (req, res) => {
+const createUserTest = catchAsync(async (req, res, next) => {
+  const { username, phoneNumber, pin } = req.body;
+  const user = createUser(username, phoneNumber, pin);
   res.status(200).json({
-    success: true,
-    message: "Hello Labs",
+    status: "success",
+    user: user,
   });
-};
+});
 
-router.route("/test").get(test);
+router.route("/test").post(createUserTest);
 
 module.exports = router;

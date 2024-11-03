@@ -8,10 +8,10 @@ const BlacklistedWallets = require("../models/blacklistedWalletsModel");
 
 dotenv.config({ path: "./.env" });
 
-const network = "mainnet";
+const network = "testnet";
 const algodServer = `https://${network}-api.algonode.cloud`;
 const indexerServer = `https://${network}-idx.algonode.cloud`;
-// Base URL for the NF Domains API on mainnet
+// Base URL for the NF Domains API on testnet
 // const NFD_API_BASE_URL = `https://api.${network}.nf.domains`;
 const NFD_API_BASE_URL = `https://api.nf.domains`;
 

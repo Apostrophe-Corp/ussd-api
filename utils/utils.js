@@ -1,5 +1,5 @@
 const axios = require("axios");
-const network = "mainnet";
+const network = "testnet";
 
 const htmlEscape = (str) => {
   return String(str)
