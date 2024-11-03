@@ -825,11 +825,6 @@ const sendGroupedAssetTransactions = async (transactions, walletId) => {
   }
 };
 
-// Utility function for delay
-const delay = (seconds) => {
-  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-};
-
 const sendGroupedAlgoTransactions = async (transactions, key) => {
   try {
     const account = await getAccount(key);
