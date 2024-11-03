@@ -26,16 +26,6 @@ async function createUser(username, phoneNumber, pin) {
     throw new Error("Missing required parameters");
   }
 
-  // Generate API client token for wallet management API
-  console.log("[createUser] Generating client token");
-  const clientToken = jwt.sign(
-    {
-      clientId: process.env.MAIN_API_CLIENT_ID,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "5m" }
-  );
-
   const baseUrl = process.env.WALLET_API_URL.endsWith("/")
     ? process.env.WALLET_API_URL.slice(0, -1)
     : process.env.WALLET_API_URL;
@@ -47,21 +37,15 @@ async function createUser(username, phoneNumber, pin) {
       method: "post",
       url: `${baseUrl}/user-wallet`,
       headers: {
-        Authorization: `Bearer ${clientToken}`,
         "X-Forwarded-For": process.env.SERVER_IP,
         "Content-Type": "application/json",
       },
-      // Add timeout to prevent hanging requests
       timeout: 30000, // 30 seconds
     };
 
     console.log("[createUser] Making wallet API request", {
       url: requestConfig.url,
       method: requestConfig.method,
-      headers: {
-        ...requestConfig.headers,
-        Authorization: "Bearer [TOKEN HIDDEN]",
-      },
       timeElapsed: `${(Date.now() - startTime) / 1000}s`,
     });
 
@@ -126,22 +110,7 @@ async function createUser(username, phoneNumber, pin) {
       timeElapsed: `${(Date.now() - startTime) / 1000}s`,
       stack: error.stack,
     });
-
-    if (error.isAxiosError) {
-      if (error.response?.status === 403) {
-        throw new Error(
-          "Authorization failed with wallet API. Please check MAIN_API_CLIENT_ID, JWT_SECRET, and SERVER_IP"
-        );
-      }
-      throw new Error(
-        `Wallet API error (${error.response?.status}): ${
-          error.response?.data?.message || error.message
-        }`
-      );
-    }
-
     throw error;
   }
 }
-
 module.exports = { createUser };
