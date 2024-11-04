@@ -5,9 +5,12 @@ const {
   getUserBalance,
   transfer,
   checkUserExists,
+  checkPinIsCorrect,
 } = require("../controllers/userController");
 const { showAsCurrency } = require("../utils/showAsCurrency");
 const { trimOverkill } = require("../utils/trimOverkill");
+const { createWithdrawal } = require("../controllers/withdrawalController");
+const { checkVendorExists } = require("../controllers/vendorController");
 
 router.route("/ussd").post(async (req, res) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
@@ -35,8 +38,7 @@ router.route("/ussd").post(async (req, res) => {
       switch (level) {
         case 1:
           if (text === "") {
-            response =
-              `CON Welcome to AetherFi!
+            response = `CON Welcome to AetherFi!
               Please enter a username to create an account:`;
           } else {
             response = "CON Please enter a 4-digit PIN:";
@@ -130,7 +132,7 @@ router.route("/ussd").post(async (req, res) => {
                 }
               } else if (isLvl(5)) {
                 const pin = lastInput;
-                if (pin === user.pin) {
+                if (await checkPinIsCorrect(phoneNumber, pin)) {
                   try {
                     const recipientPhone = textArray[1];
                     const amount = Number(textArray[3]);
@@ -160,9 +162,9 @@ router.route("/ussd").post(async (req, res) => {
                 response = "CON Enter the Vendor's ID number:";
               } else if (isLvl(2)) {
                 const venderID = lastInput;
-                const vIDIsValid = true;
+                const vIDIsValid = await checkVendorExists(venderID);
                 if (vIDIsValid) {
-                  const balance = 0;
+                  const balance = await getUserBalance(phoneNumber);
                   response = `CON Enter the amount you want to withdraw (Your Balance: ${sac(balance)} USD):`;
                 } else {
                   response =
@@ -173,8 +175,8 @@ router.route("/ussd").post(async (req, res) => {
                 if (isNaN(amount)) {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
                 } else {
-                  const balance = 0;
-                  const balanceIsSufficient = true;
+                  const balance = await getUserBalance(phoneNumber);
+                  const balanceIsSufficient = balance >= amount;
                   if (balanceIsSufficient) {
                     response = `CON Please enter you PIN to confirm this withdrawal:`;
                   } else {
@@ -183,10 +185,14 @@ router.route("/ussd").post(async (req, res) => {
                 }
               } else if (isLvl(4)) {
                 const pin = lastInput;
-                const pinIsValid = true;
+                const pinIsValid = await checkPinIsCorrect(phoneNumber, pin);
                 if (pinIsValid) {
                   try {
-                    const withdrawalCode = 0;
+                    const withdrawalCode = await createWithdrawal(
+                      amount,
+                      phoneNumber,
+                      venderID
+                    );
                     const amount = sac(Number(textArray[2]));
                     response = `END Withdrawal request for ${amount} USD successfully placed!
                     - Here is your withdrawal code:

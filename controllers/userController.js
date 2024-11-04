@@ -119,4 +119,19 @@ const checkUserExists = async (phoneNumber) => {
   }
   return user;
 };
-module.exports = { createUser, getUserBalance, transfer, checkUserExists };
+
+const checkPinIsCorrect = async (phoneNumber, pin) => {
+  const user = await User.findOne({ phoneNumber });
+  if (!user) {
+    return false;
+  }
+  return user.pin === pin;
+};
+
+module.exports = {
+  createUser,
+  getUserBalance,
+  transfer,
+  checkUserExists,
+  checkPinIsCorrect,
+};
