@@ -36,7 +36,8 @@ router.route("/ussd").post(async (req, res) => {
         case 1:
           if (text === "") {
             response =
-              "CON Welcome new user. Please enter a username to create an account:";
+              `CON Welcome to AetherFi!
+              Please enter a username to create an account:`;
           } else {
             response = "CON Please enter a 4-digit PIN:";
           }
@@ -124,7 +125,7 @@ router.route("/ussd").post(async (req, res) => {
                     response =
                       "CON Please enter your 4-digit PIN to confirm the transfer:";
                   } else {
-                    response = `END Insufficient funds. Your balance is ${sac(balance)} USD.`;
+                    response = `END Your balance: ${sac(balance)} USD, is insufficient to carry out a withdrawal of: ${sac(amount)} USD.`;
                   }
                 }
               } else if (isLvl(5)) {
