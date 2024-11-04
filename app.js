@@ -17,6 +17,7 @@ const { isValidEndpoint } = require("./utils/utils");
 const TestRouter = require("./routes/testRouter");
 const UssdRouter = require("./routes/ussdRouter");
 const VendorRouter = require("./routes/vendorRouter");
+const RemitancesAndDepositRouter = require("./routes/remitancesAndDepositRouter");
 
 const app = express();
 
@@ -25,12 +26,7 @@ app.enable("trust proxy");
 app.set("view engine", "ejs");
 
 // Set up CORS
-// app.use(
-//   cors({
-//     origin: ["https://www.viewreward.app"],
-//     credentials: true,
-//   })
-// );
+// app.use(cors());
 
 // Handle preflight requests
 // app.options("*", cors());
@@ -64,7 +60,7 @@ app.use(xss());
 // Prevent parameter pollution
 app.use(
   hpp({
-    whitelist: ["id", "status", "advertSpot", "projectName", "assetID"],
+    whitelist: ["id", "status", "phoneNumber"],
   })
 );
 
@@ -74,6 +70,7 @@ const validEndpoints = [
   "/api/v1/withdrawals",
   "/api/v1/vendors",
   "/api/v1/vendor/:id",
+  "/api/v1/user-data",
 ];
 
 const validateEndpoint = (req, res, next) => {
@@ -105,6 +102,7 @@ app.use(morganErrorMiddleware);
 app.use("/api/v1", TestRouter);
 app.use("/api/v1", UssdRouter);
 app.use("/api/v1", VendorRouter);
+app.use("/api/v1", RemitancesAndDepositRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

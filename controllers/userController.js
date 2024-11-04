@@ -1,6 +1,8 @@
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const catchAsync = require("../utils/catchAsync");
+const AppError = require("../utils/appError");
 const { getAssetBalance, transferAsset } = require("../utils/algoUtils");
 
 /**
@@ -87,6 +89,19 @@ async function createUser(username, phoneNumber, pin) {
   }
 }
 
+const getUserData = catchAsync(async (req, res, next) => {
+  const user = await User.findOne({ phoneNumber: req.body.phoneNumber });
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+  res.status(200).json({
+    success: true,
+    username: user.username,
+    phoneNumber: user.phoneNumber,
+    walletAddress: user.walletAddress,
+  });
+});
+
 const getUserBalance = async (phoneNumber) => {
   const user = await User.findOne({ phoneNumber });
   const balance = await getAssetBalance(
@@ -134,4 +149,5 @@ module.exports = {
   transfer,
   checkUserExists,
   checkPinIsCorrect,
+  getUserData,
 };

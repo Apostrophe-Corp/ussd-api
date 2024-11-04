@@ -11,7 +11,7 @@ const createVendor = catchAsync(async (req, res, next) => {
   req.body.vendorNumber = vendorCount + 1;
   const vendor = await Vendor.create(req.body);
   res.status(200).json({
-    status: "success",
+    success: true,
     vendor: vendor,
   });
 });
@@ -19,7 +19,7 @@ const createVendor = catchAsync(async (req, res, next) => {
 const getVendors = catchAsync(async (req, res, next) => {
   const vendors = await Vendor.find();
   res.status(200).json({
-    status: "success",
+    success: true,
     vendors: vendors,
   });
 });
@@ -30,14 +30,17 @@ const getVendor = catchAsync(async (req, res, next) => {
     return next(new AppError("Vendor not found", 404));
   }
   res.status(200).json({
-    status: "success",
+    success: true,
     vendor: vendor,
   });
 });
 
 const withdraw = catchAsync(async (req, res, next) => {
   const { withdrawalCode } = req.body;
-  const withdrawal = await Withdrawal.findOne({ withdrawalCode });
+  const withdrawal = await Withdrawal.findOne({
+    withdrawalCode: withdrawalCode,
+    status: "pending",
+  });
   if (!withdrawal) {
     return next(new AppError("Withdrawal not found", 404));
   }
@@ -72,7 +75,7 @@ const withdraw = catchAsync(async (req, res, next) => {
   }
 
   res.status(200).json({
-    status: "success",
+    success: true,
     txn: txn,
   });
 });
