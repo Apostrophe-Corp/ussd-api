@@ -11,7 +11,8 @@ const { showAsCurrency, trimOverkill } = require("../utils");
 router.route("/ussd").post(async (req, res) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
   console.log(sessionId, serviceCode, phoneNumber, text);
-  let response = "1*q";
+
+  let response = '';
 
   const textArray = text.split("*").filter((e) => e);
   const level = textArray.length;
