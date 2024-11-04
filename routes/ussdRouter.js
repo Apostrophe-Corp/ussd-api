@@ -6,14 +6,23 @@ const {
   transfer,
   checkUserExists,
 } = require("../controllers/userController");
+const { showAsCurrency, trimOverkill } = require("../utils");
 
 router.route("/ussd").post(async (req, res) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
   console.log(sessionId, serviceCode, phoneNumber, text);
-  let response = "";
+  let response = "1*q";
 
-  const textArray = text.split("*");
+  const textArray = text.split("*").filter((e) => e);
   const level = textArray.length;
+  const lastInput = textArray[level - 1];
+  const isLvl = (lvl) => level === lvl;
+  const sac = (amount) => showAsCurrency({
+    val: amount,
+    digits: 2,
+    depth: 1e18,
+    blankDecimals: true,
+  });
 
   try {
     const user = await checkUserExists(phoneNumber);
@@ -23,6 +32,8 @@ router.route("/ussd").post(async (req, res) => {
       switch (level) {
         case 1:
           if (text === "") {
+            // TODO shouldn't a check be carried out here for uniqueness of the username?
+            // Still me know if that's simply overkill.
             response =
               "CON Welcome new user. Please enter a username to create an account:";
           } else {
@@ -38,6 +49,7 @@ router.route("/ussd").post(async (req, res) => {
             response = "END PINs do not match. Please try again.";
           } else {
             try {
+              // TODO how do you account for unique usernames?
               await createUser(username, phoneNumber, pin);
               response =
                 "END Account created successfully. Please dial the code again to access the main menu.";
@@ -48,81 +60,357 @@ router.route("/ussd").post(async (req, res) => {
             }
           }
           break;
+        default:
+          break;
       }
     } else {
       // Existing user - show main menu and handle options
       switch (level) {
-        case 1:
+        case 0:
           // Main menu
-          response =
-            "CON Welcome back! Main Menu:\n" +
-            "1. Check Balance\n2. Transfer\n3. Withdraw\n" +
-            "4. Create Ajo\n5. Join Ajo\n6. Save\n" +
-            "7. Borrow\n8. Change Pin";
+          response = `CON Welcome back! Main Menu:
+          1. Check Balance
+          2. Transfer
+          3. Withdraw
+          4. Start Ajo
+          5. Join Ajo
+          6. Save
+          7. Borrow
+          8. Change Pin`;
           break;
-
-        case 2:
-          switch (textArray[1]) {
+        default:
+          switch (textArray[0]) {
             case "1":
               // Check account balance
               // TODO: Implement balance checking logic
-              response = "END Your balance is: [Balance]";
+              const checkBalance = 0;
+              response = `END Your balance is ${sac(checkBalance)} USD.`;
               break;
-
             case "2":
               // Transfer - Ask for recipient's phone number
-              response = "CON Enter the phone number of the recipient:";
+              if (isLvl(1)) {
+                response = "CON Enter the phone number of the recipient:";
+              } else if (isLvl(2)) {
+                // TODO check the validity of the phone number entered
+                const phoneNumber = lastInput;
+                // If phone number is valid
+                const pNIsValid = true;
+                if (pNIsValid) {
+                  response = "CON Enter the username of the recipient:";
+                } else {
+                  response = "END This phone number seems to be incorrect or doesn't own an account with us.";
+                }
+              } else if (isLvl(3)) {
+                // TODO check the validity of the username entered
+                const username = lastInput;
+                const usernameIsValid = true;
+                if (usernameIsValid) {
+                  const balance = 0;
+                  response = `CON Enter the amount you want to transfer (Your Balance: ${sac(balance)} USD):`;
+                } else {
+                  response = "END This username seems to be incorrect, please ensure you have the correct username from the recipient.";
+                }
+              } else if (isLvl(4)) {
+                // TODO check the sufficiency of the user's balance
+                // Amount would be in 2 decimal places or less
+                const amount = trimOverkill(Number(lastInput), 2);
+                if (isNaN(amount)) {
+                  response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
+                }
+                const balance = 0;
+                const balanceIsSufficient = true;
+                if (balanceIsSufficient) {
+                  response = `CON Please enter you PIN to confirm this transaction.`;
+                } else {
+                  response = `END Your balance: ${sac(balance)} USD, is insufficient to carry out a transaction of: ${sac(amount)} USD.`;
+                }
+              } else if (isLvl(5)) {
+                const pin = lastInput;
+                const pinIsValid = true;
+                if (pinIsValid) {
+                  try {
+                    // Process transaction
+                    response = `END Transfer successful.`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to complete this transaction at this time.`;
+                  }
+                } else {
+                  response = `END The PIN entered is incorrect.`;
+                }
+              }
               break;
 
             case "3":
               // Withdraw - Ask for vendor's ID
-              response = "CON Enter the vendor's ID number:";
+              if (isLvl(1)) {
+                response = "CON Enter the Vendor's ID number:";
+              } else if (isLvl(2)) {
+                const venderID = lastInput;
+                const vIDIsValid = true;
+                if (vIDIsValid) {
+                  const balance = 0;
+                  response = `CON Enter the amount you want to withdraw (Your Balance: ${sac(balance)} USD):`;
+                } else {
+                  response = "END The Vendor ID entered seems to be incorrect, please ensure you have the correct ID from the Vendor.";
+                }
+              } else if (isLvl(3)) {
+                // TODO check the sufficiency of the user's balance
+                // Amount would be in 2 decimal places or less
+                const amount = trimOverkill(Number(lastInput), 2);
+                if (isNaN(amount)) {
+                  response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
+                } else {
+                  const balance = 0;
+                  const balanceIsSufficient = true;
+                  if (balanceIsSufficient) {
+                    response = `CON Please enter you PIN to confirm this withdrawal:`;
+                  } else {
+                    response = `END Your balance: ${sac(balance)} USD, is insufficient to carry out a withdrawal of: ${sac(amount)} USD.`;
+                  }
+                }
+              } else if (isLvl(4)) {
+                const pin = lastInput;
+                const pinIsValid = true;
+                if (pinIsValid) {
+                  // Call function to store it on DB and send back number for them to give the vendor
+                  try {
+                    const withdrawalCode = 0;
+                    const amount = sac(Number(textArray[2]));
+                    response = `END Withdrawal request for ${amount} USD successfully placed!
+                    - Here is your withdrawal code:
+                    - ${withdrawalCode}
+                    - Give that to the Vendor to complete your withdrawal.`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to complete this withdrawal at this time.`;
+                  }
+                } else {
+                  response = `END The PIN entered is incorrect.`;
+                }
+              }
               break;
 
             case "4":
               // Create Ajo - Ask for frequency
-              response = "CON Select Ajo frequency:\n1. Monthly\n2. Weekly";
+              if (isLvl(1)) {
+                response = `CON Setup contribution rate:
+                1. Monthly
+                2. Weekly`;
+              } else if (isLvl(2)) {
+                const contributionRate = lastInput;
+                if (contributionRate !== '1' || contributionRate !== '2') {
+                  response = `END Invalid response.`;
+                } else {
+                  // Save the configuration?
+                  response = `CON How many people would be in this Ajo group? (Must be more than 1)`;
+                }
+              } else if (isLvl(3)) {
+                const groupSize = lastInput;
+                if (isNaN(groupSize) || Number(groupSize) <= 1) {
+                  response = `END Invalid response.`;
+                } else {
+                  response = `CON How much is each member required to contribute? (In USD)`;
+                }
+              } else if (isLvl(4)) {
+                const amount = trimOverkill(Number(lastInput));
+                if (isNaN(amount)) {
+                  response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
+                } else {
+                  try {
+                    // TODO Save Ajo configurations
+                    const ajoID = 0;
+                    response = `END Ajo group successfully created!
+                    - Please save and share this Ajo ID to have others join you Ajo group:
+                    - ${ajoID}`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to complete this Ajo set-up at this time.`;
+                  }
+                }
+              }
               break;
 
             case "5":
               // Join Ajo - Ask for ID
-              response = "CON Enter the Ajo ID you want to join:";
+              if (isLvl(1)) {
+                response = "CON Enter the Ajo ID you want to join:";
+              } else if (isLvl(2)) {
+                const ajoID = lastInput;
+                const ajoIDExists = true;
+                if (ajoIDExists) {
+                  const ajoData = {};
+                  const { membersLeft = 0, contributionAmount = 0, groupSize = 0, contributionRate = 'montly' } = ajoData;
+                  response = `CON This is a ${contributionRate} ${groupSize}-person Ajo group with ${groupSize - membersLeft} open slots. Would you like to join this Ajo group?
+                  1. Yes
+                  2. No`;
+                } else {
+                  response = `END This Ajo ID seems incorrect. Please ensure you have the correct Ajo ID.`;
+                }
+              } else if (isLvl(3)) {
+                const userChoice = lastInput;
+                if (userChoice === '1') {
+                  response = `CON Please enter your PIN to confirm this action:`;
+                } else if (userChoice === '2') {
+                  response = `END Process aborted.`;
+                } else {
+                  response = `END Invalid response.`;
+                }
+              } else if (isLvl(4)) {
+                const pin = lastInput;
+                const pinIsValid = true;
+                if (pinIsValid) {
+                  try {
+                    // Add user to Ajo group
+                    response = `END You've been added to the Ajo group.`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to add you to the Ajo group at this time.`;
+                  }
+                } else {
+                  response = `END The PIN entered is incorrect.`;
+                }
+              }
               break;
 
             case "6":
               // Save - Ask for amount
-              response = "CON Enter the amount you want to save:";
+              if (isLvl(1)) {
+                const interestRate = 0;
+                response = `CON Enter the amount you want to save (+${interestRate}% Interest Yearly):`;
+              } else if (isLvl(2)) {
+                // TODO check the sufficiency of the user's balance
+                // Amount would be in 2 decimal places or less
+                const amount = trimOverkill(Number(lastInput), 2);
+                if (isNaN(amount)) {
+                  response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
+                }
+                const balance = 0;
+                const balanceIsSufficient = true;
+                if (balanceIsSufficient) {
+                  response = `CON How long would you like to save this amount for?
+                  1. 1 Week
+                  2. 2 Weeks
+                  3. 3 Weeks
+                  4. 1 Month
+                  5. 2 Months
+                  6. 3 Months
+                  7. 6 Months
+                  8. 1 Year`;
+                } else {
+                  response = `END Your balance: ${sac(balance)} USD, is insufficient to charge this amount: ${sac(amount)} USD.`;
+                }
+              } else if (isLvl(3)) {
+                const validators = {
+                  1: true,
+                  2: true,
+                  3: true,
+                  4: true,
+                  5: true,
+                  6: true,
+                  7: true,
+                  8: true,
+                };
+                if (!validators[lastInput]) {
+                  response = 'END Invalid response';
+                } else {
+                  const durations = {
+                    1: 7,
+                    2: 14,
+                    3: 21,
+                    4: 30,
+                    5: 60,
+                    6: 90,
+                    7: 180,
+                    8: 365,
+                  };
+                  const days = durations[lastInput];
+                  // Deduct account and register savings
+                  response = `CON Please enter your PIN to complete this action:`;
+                }
+              }
+              else if (isLvl(4)) {
+                const pin = lastInput;
+                const pinIsValid = true;
+                if (pinIsValid) {
+                  try {
+                    // Process transaction
+                    response = `END Your savings have been secured.`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to complete this action at this time.`;
+                  }
+                } else {
+                  response = `END The PIN entered is incorrect.`;
+                }
+              }
               break;
 
             case "7":
               // Borrow - Ask for amount
-              response = "CON Enter the amount you want to borrow:";
+              const eligibleAmount = 0;
+              if (isLvl(1)) {
+                if (eligibleAmount)
+                  response = `CON Enter the amount you want to borrow (Up to ${eligibleAmount} USD):`;
+                else response = `END You are not eligible for this service.`;
+              } else if (isLvl(2)) {
+                // Amount would be in 2 decimal places or less
+                const amount = trimOverkill(Number(lastInput), 2);
+                if (isNaN(amount)) {
+                  response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
+                }
+                const balance = 0;
+                const isEligibleForAmount = trimOverkill(eligibleAmount, 2) >= amount;
+                if (isEligibleForAmount) {
+                  response = `CON Please enter your PIN to complete this action:`;
+                } else {
+                  response = `END Your eligible amount: ${sac(balance)} USD, is insufficient to request: ${sac(amount)} USD.`;
+                }
+              } else if (isLvl(3)) {
+                const pin = lastInput;
+                const pinIsValid = true;
+                if (pinIsValid) {
+                  try {
+                    // Process transaction
+                    response = `END You have been credited with ${sac(Number(textArray[1]))} USD.`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to complete this action at this time.`;
+                  }
+                } else {
+                  response = `END The PIN entered is incorrect.`;
+                }
+              }
               break;
 
             case "8":
               // Change Pin - Ask for old PIN
-              response = "CON Enter your current PIN:";
+              if (isLvl(1)) {
+                response = "CON Enter your current PIN:";
+              } else if (isLvl(2)) {
+                const pin = lastInput;
+                const pinIsValid = true;
+                if (pinIsValid) {
+                  response = "CON Enter your new 4-digit PIN:";
+                } else {
+                  response = `END The PIN entered is incorrect.`;
+                }
+              } else if (isLvl(3)) {
+                const pin = lastInput;
+                const previousPin = textArray[1];
+                const pinIsValid = pin !== previousPin && !isNaN(pin) && pin.length === 4;
+                if (pinIsValid) {
+                  try {
+                    // Update pin
+                    response = `END Your PIN has been updated.`;
+                  } catch (error) {
+                    response = `END Sorry we're unable to update your PIN at this time.`;
+                  }
+                } else {
+                  response = pin === previousPin ? `END The new PIN must be different from the previous one.` : isNaN(pin) || pin.length > 4 ? `END The new PIN must be a 4-digit PIN` : `END The PIN entered is incompatible for the update`;
+                }
+              }
               break;
 
             default:
-              response = "END Invalid option. Please try again.";
+              response = "END Invalid response.";
+              break;
           }
           break;
-
-        // Add more cases for subsequent levels of each option
-        case 3:
-          // Handle third level of menu options
-          // You'll need to implement the logic for each option here
-          break;
-
-        case 4:
-          // Handle fourth level of menu options
-          break;
-
-        // Add more cases as needed
-
-        default:
-          response = "END Invalid option. Please try again.";
       }
     }
   } catch (error) {
