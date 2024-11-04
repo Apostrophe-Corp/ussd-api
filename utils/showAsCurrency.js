@@ -1,6 +1,6 @@
-import { currencyFormat } from './currencyFormat'
-import { trimOverkill } from './trimOverkill'
-import { nFormatter } from './nFormatter'
+const { trimOverkill } = require('./trimOverkill');
+const { nFormatter } = require('./nFormatter');
+const { currencyFormat } = require('./currencyFormat');
 
 export function showAsCurrency({
 	val = 0,
@@ -18,3 +18,5 @@ export function showAsCurrency({
 
 	return c
 }
+
+module.exports = { showAsCurrency };

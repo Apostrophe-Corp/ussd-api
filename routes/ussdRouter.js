@@ -6,7 +6,8 @@ const {
   transfer,
   checkUserExists,
 } = require("../controllers/userController");
-const { showAsCurrency, trimOverkill } = require("../utils/figureUtils");
+const { showAsCurrency } = require("../utils/showAsCurrency");
+const { trimOverkill } = require("../utils/trimOverkill");
 
 router.route("/ussd").post(async (req, res) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;

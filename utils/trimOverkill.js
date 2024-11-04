@@ -1,4 +1,4 @@
-export const trimOverkill = (el, dec = 2) => {
+const trimOverkill = (el, dec = 2) => {
 	if (el === 0) return el
 	if (dec === 0) return Math.round(el)
 	const el_ = el
@@ -129,3 +129,5 @@ export const trimOverkill = (el, dec = 2) => {
 		el_ < 0 && el_ - (el_ % 1) === 0 ? Number(str) * -1 : Number(str)
 	return returnValue
 }
+
+module.exports = { trimOverkill };
