@@ -12,18 +12,19 @@ router.route("/ussd").post(async (req, res) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
   console.log(sessionId, serviceCode, phoneNumber, text);
 
-  let response = '';
+  let response = "";
 
   const textArray = text.split("*").filter((e) => e);
   const level = textArray.length;
   const lastInput = textArray[level - 1];
   const isLvl = (lvl) => level === lvl;
-  const sac = (amount) => showAsCurrency({
-    val: amount,
-    digits: 2,
-    depth: 1e18,
-    blankDecimals: true,
-  });
+  const sac = (amount) =>
+    showAsCurrency({
+      val: amount,
+      digits: 2,
+      depth: 1e18,
+      blankDecimals: true,
+    });
 
   try {
     const user = await checkUserExists(phoneNumber);
@@ -33,8 +34,6 @@ router.route("/ussd").post(async (req, res) => {
       switch (level) {
         case 1:
           if (text === "") {
-            // TODO shouldn't a check be carried out here for uniqueness of the username?
-            // Still me know if that's simply overkill.
             response =
               "CON Welcome new user. Please enter a username to create an account:";
           } else {
@@ -50,7 +49,6 @@ router.route("/ussd").post(async (req, res) => {
             response = "END PINs do not match. Please try again.";
           } else {
             try {
-              // TODO how do you account for unique usernames?
               await createUser(username, phoneNumber, pin);
               response =
                 "END Account created successfully. Please dial the code again to access the main menu.";
@@ -82,61 +80,74 @@ router.route("/ussd").post(async (req, res) => {
         default:
           switch (textArray[0]) {
             case "1":
-              // Check account balance
-              // TODO: Implement balance checking logic
-              const checkBalance = 0;
+              // Check Balance
+              const checkBalance = await getUserBalance(phoneNumber);
               response = `END Your balance is ${sac(checkBalance)} USD.`;
               break;
+
             case "2":
-              // Transfer - Ask for recipient's phone number
+              // Transfer flow
               if (isLvl(1)) {
                 response = "CON Enter the phone number of the recipient:";
               } else if (isLvl(2)) {
-                // TODO check the validity of the phone number entered
-                const phoneNumber = lastInput;
-                // If phone number is valid
-                const pNIsValid = true;
-                if (pNIsValid) {
-                  response = "CON Enter the username of the recipient:";
+                const recipientPhone = lastInput;
+                const recipientUser = await checkUserExists(recipientPhone);
+
+                if (recipientUser) {
+                  response = `CON Recipient found: ${recipientUser.username}
+                  Is this the correct recipient?
+                  1. Yes
+                  2. No`;
                 } else {
-                  response = "END This phone number seems to be incorrect or doesn't own an account with us.";
+                  response =
+                    "END Recipient not found. Please check the phone number and try again.";
                 }
               } else if (isLvl(3)) {
-                // TODO check the validity of the username entered
-                const username = lastInput;
-                const usernameIsValid = true;
-                if (usernameIsValid) {
-                  const balance = 0;
+                const confirmation = lastInput;
+                if (confirmation === "1") {
+                  const balance = await getUserBalance(phoneNumber);
                   response = `CON Enter the amount you want to transfer (Your Balance: ${sac(balance)} USD):`;
+                } else if (confirmation === "2") {
+                  response =
+                    "END Transfer cancelled. Please try again with the correct phone number.";
                 } else {
-                  response = "END This username seems to be incorrect, please ensure you have the correct username from the recipient.";
+                  response = "END Invalid choice. Please try again.";
                 }
               } else if (isLvl(4)) {
-                // TODO check the sufficiency of the user's balance
-                // Amount would be in 2 decimal places or less
                 const amount = trimOverkill(Number(lastInput), 2);
                 if (isNaN(amount)) {
-                  response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
-                }
-                const balance = 0;
-                const balanceIsSufficient = true;
-                if (balanceIsSufficient) {
-                  response = `CON Please enter you PIN to confirm this transaction.`;
+                  response = "END Please enter a valid amount.";
                 } else {
-                  response = `END Your balance: ${sac(balance)} USD, is insufficient to carry out a transaction of: ${sac(amount)} USD.`;
+                  const balance = await getUserBalance(phoneNumber);
+                  if (balance >= amount) {
+                    response =
+                      "CON Please enter your 4-digit PIN to confirm the transfer:";
+                  } else {
+                    response = `END Insufficient funds. Your balance is ${sac(balance)} USD.`;
+                  }
                 }
               } else if (isLvl(5)) {
                 const pin = lastInput;
-                const pinIsValid = true;
-                if (pinIsValid) {
+                if (pin === user.pin) {
                   try {
-                    // Process transaction
-                    response = `END Transfer successful.`;
+                    const recipientPhone = textArray[1];
+                    const amount = Number(textArray[3]);
+
+                    // Execute transfer
+                    await transfer(phoneNumber, recipientPhone, amount);
+
+                    // Get updated balance
+                    const newBalance = await getUserBalance(phoneNumber);
+
+                    response = `END Transfer successful! 
+                    Amount: ${sac(amount)} USD
+                    Current balance: ${sac(newBalance)} USD`;
                   } catch (error) {
-                    response = `END Sorry we're unable to complete this transaction at this time.`;
+                    console.error("Transfer error:", error);
+                    response = "END Transfer failed. Please try again later.";
                   }
                 } else {
-                  response = `END The PIN entered is incorrect.`;
+                  response = "END Incorrect PIN. Please try again.";
                 }
               }
               break;
@@ -152,11 +163,10 @@ router.route("/ussd").post(async (req, res) => {
                   const balance = 0;
                   response = `CON Enter the amount you want to withdraw (Your Balance: ${sac(balance)} USD):`;
                 } else {
-                  response = "END The Vendor ID entered seems to be incorrect, please ensure you have the correct ID from the Vendor.";
+                  response =
+                    "END The Vendor ID entered seems to be incorrect, please ensure you have the correct ID from the Vendor.";
                 }
               } else if (isLvl(3)) {
-                // TODO check the sufficiency of the user's balance
-                // Amount would be in 2 decimal places or less
                 const amount = trimOverkill(Number(lastInput), 2);
                 if (isNaN(amount)) {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
@@ -173,7 +183,6 @@ router.route("/ussd").post(async (req, res) => {
                 const pin = lastInput;
                 const pinIsValid = true;
                 if (pinIsValid) {
-                  // Call function to store it on DB and send back number for them to give the vendor
                   try {
                     const withdrawalCode = 0;
                     const amount = sac(Number(textArray[2]));
@@ -198,10 +207,9 @@ router.route("/ussd").post(async (req, res) => {
                 2. Weekly`;
               } else if (isLvl(2)) {
                 const contributionRate = lastInput;
-                if (contributionRate !== '1' || contributionRate !== '2') {
+                if (contributionRate !== "1" || contributionRate !== "2") {
                   response = `END Invalid response.`;
                 } else {
-                  // Save the configuration?
                   response = `CON How many people would be in this Ajo group? (Must be more than 1)`;
                 }
               } else if (isLvl(3)) {
@@ -217,7 +225,6 @@ router.route("/ussd").post(async (req, res) => {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
                 } else {
                   try {
-                    // TODO Save Ajo configurations
                     const ajoID = 0;
                     response = `END Ajo group successfully created!
                     - Please save and share this Ajo ID to have others join you Ajo group:
@@ -238,7 +245,12 @@ router.route("/ussd").post(async (req, res) => {
                 const ajoIDExists = true;
                 if (ajoIDExists) {
                   const ajoData = {};
-                  const { membersLeft = 0, contributionAmount = 0, groupSize = 0, contributionRate = 'montly' } = ajoData;
+                  const {
+                    membersLeft = 0,
+                    contributionAmount = 0,
+                    groupSize = 0,
+                    contributionRate = "montly",
+                  } = ajoData;
                   response = `CON This is a ${contributionRate} ${groupSize}-person Ajo group with ${groupSize - membersLeft} open slots. Would you like to join this Ajo group?
                   1. Yes
                   2. No`;
@@ -247,9 +259,9 @@ router.route("/ussd").post(async (req, res) => {
                 }
               } else if (isLvl(3)) {
                 const userChoice = lastInput;
-                if (userChoice === '1') {
+                if (userChoice === "1") {
                   response = `CON Please enter your PIN to confirm this action:`;
-                } else if (userChoice === '2') {
+                } else if (userChoice === "2") {
                   response = `END Process aborted.`;
                 } else {
                   response = `END Invalid response.`;
@@ -259,7 +271,6 @@ router.route("/ussd").post(async (req, res) => {
                 const pinIsValid = true;
                 if (pinIsValid) {
                   try {
-                    // Add user to Ajo group
                     response = `END You've been added to the Ajo group.`;
                   } catch (error) {
                     response = `END Sorry we're unable to add you to the Ajo group at this time.`;
@@ -276,8 +287,6 @@ router.route("/ussd").post(async (req, res) => {
                 const interestRate = 0;
                 response = `CON Enter the amount you want to save (+${interestRate}% Interest Yearly):`;
               } else if (isLvl(2)) {
-                // TODO check the sufficiency of the user's balance
-                // Amount would be in 2 decimal places or less
                 const amount = trimOverkill(Number(lastInput), 2);
                 if (isNaN(amount)) {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
@@ -309,7 +318,7 @@ router.route("/ussd").post(async (req, res) => {
                   8: true,
                 };
                 if (!validators[lastInput]) {
-                  response = 'END Invalid response';
+                  response = "END Invalid response";
                 } else {
                   const durations = {
                     1: 7,
@@ -322,16 +331,13 @@ router.route("/ussd").post(async (req, res) => {
                     8: 365,
                   };
                   const days = durations[lastInput];
-                  // Deduct account and register savings
                   response = `CON Please enter your PIN to complete this action:`;
                 }
-              }
-              else if (isLvl(4)) {
+              } else if (isLvl(4)) {
                 const pin = lastInput;
                 const pinIsValid = true;
                 if (pinIsValid) {
                   try {
-                    // Process transaction
                     response = `END Your savings have been secured.`;
                   } catch (error) {
                     response = `END Sorry we're unable to complete this action at this time.`;
@@ -350,13 +356,13 @@ router.route("/ussd").post(async (req, res) => {
                   response = `CON Enter the amount you want to borrow (Up to ${eligibleAmount} USD):`;
                 else response = `END You are not eligible for this service.`;
               } else if (isLvl(2)) {
-                // Amount would be in 2 decimal places or less
                 const amount = trimOverkill(Number(lastInput), 2);
                 if (isNaN(amount)) {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
                 }
                 const balance = 0;
-                const isEligibleForAmount = trimOverkill(eligibleAmount, 2) >= amount;
+                const isEligibleForAmount =
+                  trimOverkill(eligibleAmount, 2) >= amount;
                 if (isEligibleForAmount) {
                   response = `CON Please enter your PIN to complete this action:`;
                 } else {
@@ -367,7 +373,6 @@ router.route("/ussd").post(async (req, res) => {
                 const pinIsValid = true;
                 if (pinIsValid) {
                   try {
-                    // Process transaction
                     response = `END You have been credited with ${sac(Number(textArray[1]))} USD.`;
                   } catch (error) {
                     response = `END Sorry we're unable to complete this action at this time.`;
@@ -393,16 +398,21 @@ router.route("/ussd").post(async (req, res) => {
               } else if (isLvl(3)) {
                 const pin = lastInput;
                 const previousPin = textArray[1];
-                const pinIsValid = pin !== previousPin && !isNaN(pin) && pin.length === 4;
+                const pinIsValid =
+                  pin !== previousPin && !isNaN(pin) && pin.length === 4;
                 if (pinIsValid) {
                   try {
-                    // Update pin
                     response = `END Your PIN has been updated.`;
                   } catch (error) {
                     response = `END Sorry we're unable to update your PIN at this time.`;
                   }
                 } else {
-                  response = pin === previousPin ? `END The new PIN must be different from the previous one.` : isNaN(pin) || pin.length > 4 ? `END The new PIN must be a 4-digit PIN` : `END The PIN entered is incompatible for the update`;
+                  response =
+                    pin === previousPin
+                      ? `END The new PIN must be different from the previous one.`
+                      : isNaN(pin) || pin.length > 4
+                        ? `END The new PIN must be a 4-digit PIN`
+                        : `END The PIN entered is incompatible for the update`;
                 }
               }
               break;
