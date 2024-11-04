@@ -7,7 +7,7 @@ const { transferAsset } = require("../utils/algoUtils");
 
 const createVendor = catchAsync(async (req, res, next) => {
   const vendorCount = await Vendor.countDocuments();
-  req.body.vendorNumber = vendorCount + 1;
+  req.body.vendorNumber = (vendorCount + 1).padStart(4, "0");
   const vendor = await Vendor.create(req.body);
   res.status(200).json({
     status: "success",

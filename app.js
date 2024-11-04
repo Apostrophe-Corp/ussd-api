@@ -16,7 +16,7 @@ const { morganErrorMiddleware } = require("./middleware/logger");
 const { isValidEndpoint } = require("./utils/utils");
 const TestRouter = require("./routes/testRouter");
 const UssdRouter = require("./routes/ussdRouter");
-const WithdrawalRouter = require("./routes/withdrawalRouter");
+const VendorRouter = require("./routes/vendorRouter");
 
 const app = express();
 
@@ -104,7 +104,7 @@ app.use(morganErrorMiddleware);
 // 3) ROUTES
 app.use("/api/v1", TestRouter);
 app.use("/api/v1", UssdRouter);
-app.use("/api/v1", WithdrawalRouter);
+app.use("/api/v1", VendorRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
