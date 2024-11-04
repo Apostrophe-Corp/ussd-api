@@ -99,6 +99,8 @@ const getUserBalance = async (phoneNumber) => {
 const transfer = async (from, to, amount) => {
   const sender = await User.findOne({ phoneNumber: from });
   const receiver = await User.findOne({ phoneNumber: to });
+  console.log("sender", sender);
+  console.log("receiver", receiver);
   const note = `Transfer from ${sender.username} to ${receiver.username} on ussdapp.com`;
   const txn = await transferAsset(
     sender.walletAddress,
