@@ -4,6 +4,7 @@ const {
   getUserBalance,
   transfer,
 } = require("../controllers/userController");
+const { createWithdrawal } = require("../controllers/withdrawalController");
 const catchAsync = require("../utils/catchAsync");
 const router = express.Router();
 
@@ -25,6 +26,15 @@ const testTransfer = catchAsync(async (req, res, next) => {
   });
 });
 
-router.route("/test").post(testTransfer);
+const testWithdrawal = catchAsync(async (req, res, next) => {
+  const { amount, phoneNumber, vendorNumber } = req.body;
+  const withdrawal = await createWithdrawal(amount, phoneNumber, vendorNumber);
+  res.status(200).json({
+    status: "success",
+    withdrawal: withdrawal,
+  });
+});
+
+router.route("/test").post(testWithdrawal);
 
 module.exports = router;

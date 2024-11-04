@@ -13,12 +13,12 @@ const generateAlphanumericCode = () => {
   return code;
 };
 
-const createWithdrawal = async (amount, phooneNumber, vendorNumber) => {
+const createWithdrawal = async (amount, phoneNumber, vendorNumber) => {
   const vendor = await Vendor.findOne({ vendorNumber });
   if (!vendor) {
     throw new Error("Vendor not found");
   }
-  const user = await User.findOne({ phoneNumber: phooneNumber });
+  const user = await User.findOne({ phoneNumber: phoneNumber });
   if (!user) {
     throw new Error("User not found");
   }
