@@ -898,9 +898,6 @@ async function sendGroupedNFDTransactions(transactions, key) {
 // Utility to sign transactions via wallet management API
 const signTransactionWithWalletApi = async (walletId, transaction) => {
   const startTime = Date.now();
-  console.log("[signTransactionWithWalletApi] Starting signature request", {
-    walletId,
-  });
 
   const baseUrl = process.env.WALLET_API_URL.endsWith("/")
     ? process.env.WALLET_API_URL.slice(0, -1)
@@ -922,12 +919,6 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
       timeout: 30000, // 30 seconds
     };
 
-    console.log("[signTransactionWithWalletApi] Sending request", {
-      url: requestConfig.url,
-      clientId: process.env.MAIN_API_CLIENT_ID,
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
-
     const response = await axios(requestConfig).catch((error) => {
       console.error("[signTransactionWithWalletApi] Axios request failed", {
         message: error.message,
@@ -948,10 +939,6 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
         "Invalid wallet API response: Missing signed transaction data"
       );
     }
-
-    console.log("[signTransactionWithWalletApi] Signature received", {
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
 
     return response.data.signedTransaction;
   } catch (error) {
@@ -978,26 +965,11 @@ const transferAsset = async (
   note
 ) => {
   const startTime = Date.now();
-  console.log("[transferAsset] Starting transfer", {
-    fromAddress,
-    toAddress,
-    assetId,
-    amount,
-    walletId,
-  });
 
   try {
     const suggestedParams = await algodClient.getTransactionParams().do();
 
     const assetAmount = await parseCurrency(assetId, amount);
-    console.log("[transferAsset] Parsed amount and params", {
-      assetAmount,
-      suggestedParams: {
-        fee: suggestedParams.fee,
-        firstRound: suggestedParams.firstRound,
-        lastRound: suggestedParams.lastRound,
-      },
-    });
 
     const txnParams = {
       from: fromAddress,
@@ -1017,35 +989,16 @@ const transferAsset = async (
       algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject(txnParams);
     const txnBase64 = Buffer.from(ptxn.toByte()).toString("base64");
 
-    console.log("[transferAsset] Created transaction", {
-      txId: ptxn.txID().toString(),
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
-
     const signedTxnBase64 = await signTransactionWithWalletApi(
       walletId,
       txnBase64
     );
     const signedTxn = Buffer.from(signedTxnBase64, "base64");
 
-    console.log("[transferAsset] Transaction signed", {
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
-
     await algodClient.sendRawTransaction(signedTxn).do();
     const txId = ptxn.txID().toString();
 
-    console.log("[transferAsset] Transaction submitted", {
-      txId,
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
-
     await algosdk.waitForConfirmation(algodClient, txId, 4);
-
-    console.log("[transferAsset] Transaction confirmed", {
-      txId,
-      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
-    });
 
     return txId;
   } catch (error) {
