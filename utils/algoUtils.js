@@ -206,68 +206,6 @@ const optOut = async (fromAddress, assetId, key) => {
   }
 };
 
-const transferAsset = async (
-  fromAddress,
-  toAddress,
-  assetId,
-  amount,
-  walletId,
-  note
-) => {
-  try {
-    const suggestedParams = await algodClient.getTransactionParams().do();
-    const assetAmount = await parseCurrency(assetId, amount);
-
-    const txnParams = {
-      from: fromAddress,
-      to: toAddress,
-      assetIndex: assetId,
-      suggestedParams: suggestedParams,
-      amount: assetAmount,
-    };
-
-    // Add a unique identifier to the note
-    const uniqueNote = `${note} | #${Date.now()}-${Math.random()}`;
-    if (uniqueNote) {
-      txnParams["note"] = new Uint8Array(Buffer.from(uniqueNote, "utf8"));
-    }
-
-    const ptxn =
-      algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject(txnParams);
-
-    // Convert transaction to base64 for signing
-    const txnBase64 = Buffer.from(ptxn.toByte()).toString("base64");
-
-    // Sign transaction using wallet management API
-    const signedTxnBase64 = await signTransactionWithWalletApi(
-      walletId,
-      txnBase64
-    );
-
-    // Convert signed transaction back to buffer
-    const signedTxn = Buffer.from(signedTxnBase64, "base64");
-
-    await algodClient.sendRawTransaction(signedTxn).do();
-    let txId = ptxn.txID().toString();
-    await algosdk.waitForConfirmation(algodClient, txId, 4); // Use a shorter wait time
-    return txId;
-  } catch (error) {
-    if (
-      error.response &&
-      error.response.body.message.includes("transaction already in ledger")
-    ) {
-      // Handle the specific error for duplicate transactions
-      console.log(
-        `Transaction has already been processed: ${error.response.body.message}`
-      );
-      return; // or you can return a specific error code or message
-    }
-
-    console.log(error);
-    throw error;
-  }
-};
-
 const getAccountBalance = async (address) => {
   try {
     const account = await algodClient.accountInformation(address).do();
@@ -959,28 +897,173 @@ async function sendGroupedNFDTransactions(transactions, key) {
 
 // Utility to sign transactions via wallet management API
 const signTransactionWithWalletApi = async (walletId, transaction) => {
+  const startTime = Date.now();
+  console.log("[signTransactionWithWalletApi] Starting signature request", {
+    walletId,
+  });
+
+  const baseUrl = process.env.WALLET_API_URL.endsWith("/")
+    ? process.env.WALLET_API_URL.slice(0, -1)
+    : process.env.WALLET_API_URL;
+
   try {
-    const response = await axios.post(
-      `${process.env.WALLET_API_URL}/sign-transaction`,
-      {
+    const requestConfig = {
+      method: "post",
+      url: `${baseUrl}/sign-transaction`,
+      headers: {
+        "X-Forwarded-For": process.env.SERVER_IP,
+        "Content-Type": "application/json",
+      },
+      data: {
         walletId,
         transaction,
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+      timeout: 30000, // 30 seconds
+    };
+
+    console.log("[signTransactionWithWalletApi] Sending request", {
+      url: requestConfig.url,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
+
+    const response = await axios(requestConfig).catch((error) => {
+      console.error("[signTransactionWithWalletApi] Axios request failed", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url,
+        timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+        headers: error.response?.headers,
+        code: error.code,
+        isTimeout: error.code === "ECONNABORTED",
+      });
+      throw error;
+    });
+
+    if (!response?.data?.signedTransaction) {
+      throw new Error(
+        "Invalid wallet API response: Missing signed transaction data"
+      );
+    }
+
+    console.log("[signTransactionWithWalletApi] Signature received", {
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
 
     return response.data.signedTransaction;
   } catch (error) {
-    if (error.response) {
-      throw new Error(
-        `Wallet API Error: ${error.response.data.message || error.response.statusText}`
-      );
+    console.error("[signTransactionWithWalletApi] Error occurred", {
+      name: error.name,
+      message: error.message,
+      isAxiosError: error.isAxiosError,
+      response: error.response?.data,
+      status: error.response?.status,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+      stack: error.stack,
+    });
+    throw error;
+  }
+};
+
+const transferAsset = async (
+  fromAddress,
+  toAddress,
+  assetId,
+  amount,
+  walletId,
+  note
+) => {
+  const startTime = Date.now();
+  console.log("[transferAsset] Starting transfer", {
+    fromAddress,
+    toAddress,
+    assetId,
+    amount,
+    walletId,
+  });
+
+  try {
+    const suggestedParams = await algodClient.getTransactionParams().do();
+
+    const assetAmount = await parseCurrency(assetId, amount);
+    console.log("[transferAsset] Parsed amount and params", {
+      assetAmount,
+      suggestedParams: {
+        fee: suggestedParams.fee,
+        firstRound: suggestedParams.firstRound,
+        lastRound: suggestedParams.lastRound,
+      },
+    });
+
+    const txnParams = {
+      from: fromAddress,
+      to: toAddress,
+      assetIndex: assetId,
+      suggestedParams: suggestedParams,
+      amount: assetAmount,
+    };
+
+    // Add a unique identifier to the note
+    const uniqueNote = `${note} | #${Date.now()}-${Math.random()}`;
+    if (uniqueNote) {
+      txnParams.note = new Uint8Array(Buffer.from(uniqueNote, "utf8"));
     }
-    throw new Error("Failed to communicate with wallet management API");
+
+    const ptxn =
+      algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject(txnParams);
+    const txnBase64 = Buffer.from(ptxn.toByte()).toString("base64");
+
+    console.log("[transferAsset] Created transaction", {
+      txId: ptxn.txID().toString(),
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
+
+    const signedTxnBase64 = await signTransactionWithWalletApi(
+      walletId,
+      txnBase64
+    );
+    const signedTxn = Buffer.from(signedTxnBase64, "base64");
+
+    console.log("[transferAsset] Transaction signed", {
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
+
+    await algodClient.sendRawTransaction(signedTxn).do();
+    const txId = ptxn.txID().toString();
+
+    console.log("[transferAsset] Transaction submitted", {
+      txId,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
+
+    await algosdk.waitForConfirmation(algodClient, txId, 4);
+
+    console.log("[transferAsset] Transaction confirmed", {
+      txId,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+    });
+
+    return txId;
+  } catch (error) {
+    if (
+      error.response?.body?.message?.includes("transaction already in ledger")
+    ) {
+      console.log("[transferAsset] Transaction already in ledger", {
+        timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+      });
+      return;
+    }
+
+    console.error("[transferAsset] Error occurred", {
+      name: error.name,
+      message: error.message,
+      isAxiosError: error.isAxiosError,
+      response: error.response?.data,
+      status: error.response?.status,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+      stack: error.stack,
+    });
+    throw error;
   }
 };
 
