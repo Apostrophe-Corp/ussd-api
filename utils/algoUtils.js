@@ -913,6 +913,7 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
       headers: {
         "X-Forwarded-For": process.env.SERVER_IP,
         "Content-Type": "application/json",
+        "X-Client-ID": process.env.MAIN_API_CLIENT_ID, // Added client ID header
       },
       data: {
         walletId,
@@ -923,6 +924,7 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
 
     console.log("[signTransactionWithWalletApi] Sending request", {
       url: requestConfig.url,
+      clientId: process.env.MAIN_API_CLIENT_ID,
       timeElapsed: `${(Date.now() - startTime) / 1000}s`,
     });
 
@@ -936,6 +938,7 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
         headers: error.response?.headers,
         code: error.code,
         isTimeout: error.code === "ECONNABORTED",
+        clientId: process.env.MAIN_API_CLIENT_ID, // Added to error logging
       });
       throw error;
     });
@@ -959,6 +962,7 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
       response: error.response?.data,
       status: error.response?.status,
       timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+      clientId: process.env.MAIN_API_CLIENT_ID, // Added to error logging
       stack: error.stack,
     });
     throw error;
