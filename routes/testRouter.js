@@ -16,6 +16,15 @@ const createUserTest = catchAsync(async (req, res, next) => {
   });
 });
 
-router.route("/test").post(createUserTest);
+const testTransfer = catchAsync(async (req, res, next) => {
+  const { from, to, amount } = req.body;
+  const txn = await transfer(from, to, amount);
+  res.status(200).json({
+    status: "success",
+    txn: txn,
+  });
+});
+
+router.route("/test").post(testTransfer);
 
 module.exports = router;
