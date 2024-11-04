@@ -2,6 +2,7 @@ const Vendor = require("../models/vendorModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Withdrawal = require("../models/withdrawalModel");
+const User = require("../models/userModel");
 
 const { transferAsset } = require("../utils/algoUtils");
 
