@@ -1,6 +1,6 @@
 const { trimOverkill } = require("./trimOverkill");
 
-export function nFormatter(num, digits = 0, depth = 1) {
+const nFormatter = function (num, digits = 0, depth = 1) {
   num = trimOverkill(num, digits);
   const lookup = [
     { value: 1, symbol: "" },
@@ -16,6 +16,6 @@ export function nFormatter(num, digits = 0, depth = 1) {
   return item
     ? (num / item.value).toFixed(digits).replace(regexp, "").concat(item.symbol)
     : num;
-}
+};
 
 module.exports = { nFormatter };
