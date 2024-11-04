@@ -911,9 +911,9 @@ const signTransactionWithWalletApi = async (walletId, transaction) => {
       method: "post",
       url: `${baseUrl}/sign-transaction`,
       headers: {
-        "X-Forwarded-For": process.env.SERVER_IP,
+        "X-forwarded-for": process.env.SERVER_IP,
         "Content-Type": "application/json",
-        "X-Client-ID": process.env.MAIN_API_CLIENT_ID, // Added client ID header
+        "x-client-id": process.env.MAIN_API_CLIENT_ID, // Added client ID header
       },
       data: {
         walletId,
