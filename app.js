@@ -17,7 +17,8 @@ const { isValidEndpoint } = require("./utils/utils");
 const TestRouter = require("./routes/testRouter");
 const UssdRouter = require("./routes/ussdRouter");
 const VendorRouter = require("./routes/vendorRouter");
-const RemitancesAndDepositRouter = require("./routes/remitancesAndDepositRouter");
+const RemittancesAndDepositRouter = require("./routes/remittancesAndDepositRouter");
+const AirdropRouter = require("./routes/airdropRouter");
 
 const app = express();
 
@@ -71,6 +72,8 @@ const validEndpoints = [
   "/api/v1/vendors",
   "/api/v1/vendor/:id",
   "/api/v1/user-data",
+  "/api/v1/airdrop/:id",
+  "/api/v1/airdrops",
 ];
 
 const validateEndpoint = (req, res, next) => {
@@ -102,7 +105,7 @@ app.use(morganErrorMiddleware);
 app.use("/api/v1", TestRouter);
 app.use("/api/v1", UssdRouter);
 app.use("/api/v1", VendorRouter);
-app.use("/api/v1", RemitancesAndDepositRouter);
+app.use("/api/v1", RemittancesAndDepositRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

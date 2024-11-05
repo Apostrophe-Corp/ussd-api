@@ -2,6 +2,7 @@ const express = require("express");
 const {
   createUser,
   getUserBalance,
+  createAdmin,
   transfer,
 } = require("../controllers/userController");
 const { createWithdrawal } = require("../controllers/withdrawalController");
@@ -14,6 +15,15 @@ const createUserTest = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     user: user,
+  });
+});
+
+const createAdmin = catchAsync(async (req, res, next) => {
+  const { username, phoneNumber, pin } = req.body;
+  const admin = await createAdmin(username, phoneNumber, pin);
+  res.status(200).json({
+    status: "success",
+    admin: admin,
   });
 });
 
@@ -35,6 +45,6 @@ const testWithdrawal = catchAsync(async (req, res, next) => {
   });
 });
 
-router.route("/test").post(testWithdrawal);
+router.route("/test").post(createAdmin);
 
 module.exports = router;

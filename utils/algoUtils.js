@@ -1024,7 +1024,68 @@ const transferAsset = async (
   }
 };
 
+const refundCreator = async (walletId, creatorAddress) => {
+  const startTime = Date.now();
+
+  const baseUrl = process.env.WALLET_API_URL.endsWith("/")
+    ? process.env.WALLET_API_URL.slice(0, -1)
+    : process.env.WALLET_API_URL;
+
+  try {
+    const requestConfig = {
+      method: "post",
+      url: `${baseUrl}/refund`,
+      headers: {
+        "X-forwarded-for": process.env.SERVER_IP,
+        "Content-Type": "application/json",
+        "x-client-id": process.env.MAIN_API_CLIENT_ID, // Added client ID header
+      },
+      data: {
+        walletId,
+        creatorAddress,
+      },
+      timeout: 30000, // 30 seconds
+    };
+
+    const response = await axios(requestConfig).catch((error) => {
+      console.error("[signTransactionWithWalletApi] Axios request failed", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url,
+        timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+        headers: error.response?.headers,
+        code: error.code,
+        isTimeout: error.code === "ECONNABORTED",
+        clientId: process.env.MAIN_API_CLIENT_ID, // Added to error logging
+      });
+      throw error;
+    });
+
+    if (!response?.data?.signedTransaction) {
+      throw new Error(
+        "Invalid wallet API response: Missing signed transaction data"
+      );
+    }
+
+    return response.data.txID;
+  } catch (error) {
+    console.error("[signTransactionWithWalletApi] Error occurred", {
+      name: error.name,
+      message: error.message,
+      isAxiosError: error.isAxiosError,
+      response: error.response?.data,
+      status: error.response?.status,
+      timeElapsed: `${(Date.now() - startTime) / 1000}s`,
+      clientId: process.env.MAIN_API_CLIENT_ID, // Added to error logging
+      stack: error.stack,
+    });
+    throw error;
+  }
+};
+
 module.exports = {
+  refundCreator,
   fetchNFDData,
   fetchNFDVaultTransactions,
   sendGroupedAssetTransactions,

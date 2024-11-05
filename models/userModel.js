@@ -22,6 +22,12 @@ const userModel = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: [true, "Please enter your wallet ID"],
   },
+  role: {
+    type: String,
+    default: "user",
+    enum: ["admin", "user"],
+    immutable: true,
+  },
 });
 
 module.exports = mongoose.model("User", userModel);
