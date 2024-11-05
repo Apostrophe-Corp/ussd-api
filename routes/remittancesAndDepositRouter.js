@@ -2,5 +2,5 @@ const express = require("express");
 const router = express.Router();
 const { getUserData } = require("../controllers/userController");
 
-router.route("/user-data").get(getUserData);
+router.route("/user-data").post(getUserData);
 module.exports = router;
