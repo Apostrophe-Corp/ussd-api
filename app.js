@@ -106,6 +106,7 @@ app.use("/api/v1", TestRouter);
 app.use("/api/v1", UssdRouter);
 app.use("/api/v1", VendorRouter);
 app.use("/api/v1", RemittancesAndDepositRouter);
+app.use("/api/v1", AirdropRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

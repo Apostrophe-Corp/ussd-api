@@ -95,6 +95,9 @@ router.route("/ussd").post(async (req, res) => {
                 response = "CON Enter the phone number of the recipient:";
               } else if (isLvl(2)) {
                 const recipientPhone = lastInput;
+                if (recipientPhone.startsWith("0")) {
+                  recipientPhone = `+234${recipientPhone.slice(1)}`;
+                }
                 const recipientUser = await checkUserExists(recipientPhone);
 
                 if (recipientUser) {

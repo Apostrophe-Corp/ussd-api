@@ -176,8 +176,9 @@ const getSnapshot = async () => {
       const lastPaymentDate = project.lastPaymentDate
         ? new Date(project.lastPaymentDate)
         : null;
+      // TODO: change period map for daily back to this 23 * 60 * 60 * 1000,
       const periodMap = {
-        daily: 23 * 60 * 60 * 1000,
+        daily: 14 * 60 * 1000,
         weekly: 6 * 24 * 60 * 60 * 1000,
         monthly: 29 * 24 * 60 * 60 * 1000,
         yearly: 364 * 24 * 60 * 60 * 1000,
@@ -248,8 +249,34 @@ const getSnapshot = async () => {
 
 const sendTokens = async () => {
   try {
+    const currentDate = new Date();
     const projects = await Airdrop.find({ status: "active" });
-    for (const project of projects) {
+
+    const filteredProjects = projects.filter((project) => {
+      const lastPaymentDate = project.lastPaymentDate
+        ? new Date(project.lastPaymentDate)
+        : null;
+      // TODO: change period map for daily back to this 23 * 60 * 60 * 1000,
+      const periodMap = {
+        daily: 14 * 60 * 1000,
+        weekly: 6 * 24 * 60 * 60 * 1000,
+        monthly: 29 * 24 * 60 * 60 * 1000,
+        yearly: 364 * 24 * 60 * 60 * 1000,
+      };
+      const periodDuration = periodMap[project.period];
+
+      if (!lastPaymentDate) {
+        return true;
+      }
+
+      const timeDifference = currentDate - lastPaymentDate;
+      const roundedTimeDifference =
+        Math.floor(timeDifference / periodDuration) * periodDuration;
+
+      return roundedTimeDifference >= periodDuration;
+    });
+
+    for (const project of filteredProjects) {
       let total = 0;
       let beneficiaries = [];
       const wallet = await Wallets.findOne({ walletID: project.walletID });
