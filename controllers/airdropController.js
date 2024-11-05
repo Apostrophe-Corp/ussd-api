@@ -33,16 +33,6 @@ const {
 
 const createProjectWallet = async () => {
   const startTime = Date.now();
-
-  // Input validation
-  if (!username || !phoneNumber || !pin) {
-    console.error("[createUser] Missing required parameters", {
-      username,
-      phoneNumber,
-    });
-    throw new Error("Missing required parameters");
-  }
-
   const baseUrl = process.env.WALLET_API_URL.endsWith("/")
     ? process.env.WALLET_API_URL.slice(0, -1)
     : process.env.WALLET_API_URL;
