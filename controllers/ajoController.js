@@ -99,11 +99,14 @@ const joinAjo = async (ajoCode, user) => {
       code: ajoCode,
       status: "pending",
     });
+    console.log(ajo);
 
     // If no pending Ajo is found, return false
     if (!ajo) {
       return false;
     }
+
+    console.log("user", user);
 
     // Create a new contribution for the user
     const newContribution = new Contribution({

@@ -42,7 +42,9 @@ const CreateAjoTest = catchAsync(async (req, res, next) => {
 const joinAjoTest = catchAsync(async (req, res, next) => {
   const { ajoCode, phoneNumber } = req.body;
   const user = await User.findOne({ phoneNumber });
+  console.log("user", user);
   const ajo = await joinAjo(ajoCode, user);
+  console.log("ajo", ajo);
   res.status(200).json({
     status: "success",
     ajo: ajo,
