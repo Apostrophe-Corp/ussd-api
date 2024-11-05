@@ -34,6 +34,10 @@ const ajoSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  contributorCount: {
+    type: Number,
+    required: true,
+  },
 });
 
 module.exports = mongoose.model("Ajo", ajoSchema);
