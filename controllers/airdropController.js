@@ -170,7 +170,7 @@ const getSnapshot = async () => {
         : null;
       // TODO: change period map for daily back to this 23 * 60 * 60 * 1000,
       const periodMap = {
-        daily: 14 * 60 * 1000,
+        daily: 23 * 60 * 60 * 1000,
         weekly: 6 * 24 * 60 * 60 * 1000,
         monthly: 29 * 24 * 60 * 60 * 1000,
         yearly: 364 * 24 * 60 * 60 * 1000,
@@ -250,7 +250,7 @@ const sendTokens = async () => {
         : null;
       // TODO: change period map for daily back to this 23 * 60 * 60 * 1000,
       const periodMap = {
-        daily: 14 * 60 * 1000,
+        daily: 23 * 60 * 60 * 1000,
         weekly: 6 * 24 * 60 * 60 * 1000,
         monthly: 29 * 24 * 60 * 60 * 1000,
         yearly: 364 * 24 * 60 * 60 * 1000,
