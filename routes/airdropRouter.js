@@ -9,6 +9,6 @@ const {
 } = require("../controllers/airdropController");
 
 router.route("/airdrops").get(getAirdrops).post(createAirdropStep1);
-router.route("/airdrop/:id").get(getAirdrop).post(createAirdropStep2);
+router.route("/airdrop/:id").get(getAirdrop).patch(createAirdropStep2);
 
 module.exports = router;
