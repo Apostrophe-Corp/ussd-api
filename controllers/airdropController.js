@@ -121,7 +121,7 @@ const createAirdropStep2 = catchAsync(async (req, res, next) => {
   if (!airdrop) {
     return next(new AppError("Airdrop not found", 404));
   }
-  await airdrop.findByIdAndUpdate(req.params.id, { status: "active" });
+  await Airdrop.findByIdAndUpdate(req.params.id, { status: "active" });
   await Wallets.findByIdAndUpdate(airdrop.walletID, { status: "unavailable" });
   res.status(200).json({
     success: true,
