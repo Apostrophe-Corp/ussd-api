@@ -1,5 +1,5 @@
 const Ajo = require("../models/ajoModel");
-const Contribution = require("../models/contributionsModel");
+const Contribution = require("../models/contributionModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const User = require("../models/userModel");
