@@ -18,7 +18,7 @@ const createUserTest = catchAsync(async (req, res, next) => {
   });
 });
 
-const createAdmin = catchAsync(async (req, res, next) => {
+const createAdminUser = catchAsync(async (req, res, next) => {
   const { username, phoneNumber, pin } = req.body;
   const admin = await createAdmin(username, phoneNumber, pin);
   res.status(200).json({
@@ -45,6 +45,6 @@ const testWithdrawal = catchAsync(async (req, res, next) => {
   });
 });
 
-router.route("/test").post(createAdmin);
+router.route("/test").post(createAdminUser);
 
 module.exports = router;
