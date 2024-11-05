@@ -221,7 +221,18 @@ const checkPinIsCorrect = async (phoneNumber, pin) => {
   return user.pin === Number(pin);
 };
 
+const updatePin = async (phoneNumber, pin) => {
+  const user = await User.findOne({ phoneNumber });
+  if (!user) {
+    return false;
+  }
+  user.pin = Number(pin);
+  await user.save();
+  return true;
+};
+
 module.exports = {
+  updatePin,
   createUser,
   createAdmin,
   getUserBalance,

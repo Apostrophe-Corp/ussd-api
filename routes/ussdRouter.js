@@ -6,6 +6,7 @@ const {
   transfer,
   checkUserExists,
   checkPinIsCorrect,
+  updatePin,
 } = require("../controllers/userController");
 const { showAsCurrency } = require("../utils/showAsCurrency");
 const { trimOverkill } = require("../utils/trimOverkill");
@@ -464,7 +465,7 @@ router.route("/ussd").post(async (req, res) => {
                 response = "CON Enter your current PIN:";
               } else if (isLvl(2)) {
                 const pin = lastInput;
-                const pinIsValid = true;
+                const pinIsValid = await checkPinIsCorrect(phoneNumber, pin);
                 if (pinIsValid) {
                   response = "CON Enter your new 4-digit PIN:";
                 } else {
@@ -477,6 +478,7 @@ router.route("/ussd").post(async (req, res) => {
                   pin !== previousPin && !isNaN(pin) && pin.length === 4;
                 if (pinIsValid) {
                   try {
+                    await updatePin(phoneNumber, pin);
                     response = `END Your PIN has been updated.`;
                   } catch (error) {
                     response = `END Sorry we're unable to update your PIN at this time.`;
