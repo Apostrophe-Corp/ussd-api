@@ -8,7 +8,11 @@ const {
 } = require("../controllers/userController");
 const { createLoan } = require("../controllers/loanController");
 const { createSavings } = require("../controllers/savingsController");
-const { createAjo, getAjoData } = require("../controllers/ajoController");
+const {
+  createAjo,
+  joinAjo,
+  getAjoData,
+} = require("../controllers/ajoController");
 const { createWithdrawal } = require("../controllers/withdrawalController");
 const catchAsync = require("../utils/catchAsync");
 const router = express.Router();
@@ -98,8 +102,17 @@ const testWithdrawal = catchAsync(async (req, res, next) => {
   });
 });
 
+const testGetAjoData = catchAsync(async (req, res, next) => {
+  const { ajoCode } = req.body;
+  const ajo = await getAjoData(ajoCode);
+  res.status(200).json({
+    status: "success",
+    ajo: ajo,
+  });
+});
+
 // router.route("/test").post(createAdminUser);
-router.route("/ajo").post(CreateAjoTest).patch(joinAjoTest);
+router.route("/ajo").post(CreateAjoTest).patch(joinAjoTest).get(testGetAjoData);
 router.route("/loan").post(createLoanTest);
 router.route("/savings").post(createSavingsTest);
 router.route("/user").post(createUserTest);
