@@ -31,6 +31,8 @@ const {
   refundCreator,
 } = require("../utils/algoUtils");
 
+const USDC_ASSET_ID = 10458941;
+
 const createProjectWallet = async () => {
   const startTime = Date.now();
   const baseUrl = process.env.WALLET_API_URL.endsWith("/")
@@ -201,7 +203,7 @@ const getSnapshot = async () => {
       total = beneficiaries.length * project.amount;
       let minFee = await getMinFee();
       minFee = await microAlgosToAlgo(minFee);
-      let mbr = await getMBR();
+      let mbr = await getMBR(project.walletAddress);
       mbr = await microAlgosToAlgo(mbr);
       let totalAlgoNeeded = beneficiaries.length * minFee;
       totalAlgoNeeded = totalAlgoNeeded + mbr;
@@ -209,7 +211,7 @@ const getSnapshot = async () => {
       algoBalance = await microAlgosToAlgo(algoBalance);
       let assetBalance = await getAssetBalance(
         project.walletAddress,
-        process.env.USDC_ASSET_ID
+        USDC_ASSET_ID
       );
       console.log("assetBalance", assetBalance);
       console.log("algoBalance", algoBalance);
@@ -283,7 +285,7 @@ const sendTokens = async () => {
       let amount = 0;
 
       const { amount: adjustedAmount } = await convertFractionalAssetAmount(
-        process.env.USDC_ASSET_ID,
+        USDC_ASSET_ID,
         project.amount
       );
       amount = adjustedAmount;
@@ -291,8 +293,7 @@ const sendTokens = async () => {
       for (const beneficiary of beneficiaries) {
         // Correctly format the amount in the note
         let displayAmount = (
-          amount /
-          Math.pow(10, await getAssetDecimals(process.env.USDC_ASSET_ID))
+          amount / Math.pow(10, await getAssetDecimals(USDC_ASSET_ID))
         ).toFixed(2);
 
         let note = `Congratulations! You've received ${displayAmount} USDC${
@@ -304,7 +305,7 @@ const sendTokens = async () => {
           from: wallet.walletAddress,
           to: beneficiary.walletAddress,
           amount: amount,
-          assetIndex: process.env.USDC_ASSET_ID,
+          assetIndex: USDC_ASSET_ID,
           note,
         });
       }
