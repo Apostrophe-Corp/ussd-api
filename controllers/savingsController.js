@@ -39,10 +39,10 @@ const createSavings = async (user, amount, duration) => {
     const adminUser = await User.findOne({ role: "admin" });
     const txID = await transferAsset(
       user.walletAddress,
-      adminUser.walletID,
+      adminUser.walletAddress,
       USDC_ASSET_ID,
       amount,
-      adminUser.walletID,
+      user.walletID,
       "Savings created on ussdapp.com"
     );
     const savings = await Savings.create({

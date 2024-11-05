@@ -40,7 +40,7 @@ const createLoan = async (user, amount, duration) => {
     const adminUser = await User.findOne({ role: "admin" });
     const txID = await transferAsset(
       adminUser.walletAddress,
-      user.walletID,
+      user.walletAddress,
       USDC_ASSET_ID,
       amount,
       adminUser.walletID,
