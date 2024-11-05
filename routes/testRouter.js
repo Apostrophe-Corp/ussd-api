@@ -25,8 +25,8 @@ const createUserTest = catchAsync(async (req, res, next) => {
 const CreateAjoTest = catchAsync(async (req, res, next) => {
   const { amount, count, period, phoneNumber } = req.body;
   const user = await User.findOne({ phoneNumber });
-  const contributorCount = Number(count);
-  const contributionPeriod = Number(period);
+  const contributorCount = count;
+  const contributionPeriod = period;
   const ajo = await createAjo(
     contributionPeriod,
     amount,
