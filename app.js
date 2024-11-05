@@ -27,10 +27,15 @@ app.enable("trust proxy");
 app.set("view engine", "ejs");
 
 // Set up CORS
-// app.use(cors());
+app.use(
+  cors({
+    origin: ["https://aether-fi.vercel.app", "https://api.viewreward.app"],
+    credentials: true,
+  })
+);
 
 // Handle preflight requests
-// app.options("*", cors());
+app.options("*", cors());
 
 // 1) GLOBAL MIDDLEWARES
 // Set security HTTP headers
