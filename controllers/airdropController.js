@@ -98,7 +98,9 @@ const createAirdropStep1 = catchAsync(async (req, res, next) => {
   let walletID;
   let walletAddress;
   if (wallets.length === 0) {
-    const { walletAddress, walletID } = await createProjectWallet();
+    const tmp = await createProjectWallet();
+    walletID = tmp.walletID;
+    walletAddress = tmp.walletAddress;
     await Wallets.create({ walletAddress, walletID });
   } else {
     walletID = wallets[0].walletID;
