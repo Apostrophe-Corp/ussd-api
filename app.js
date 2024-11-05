@@ -66,7 +66,6 @@ app.use(
 );
 
 const validEndpoints = [
-  "/api/v1/test",
   "/api/v1/ussd",
   "/api/v1/withdrawals",
   "/api/v1/vendors",
@@ -74,6 +73,9 @@ const validEndpoints = [
   "/api/v1/user-data",
   "/api/v1/airdrop/:id",
   "/api/v1/airdrops",
+  "/api/v1/ajo",
+  "/api/v1/loan",
+  "/api/v1/savings",
 ];
 
 const validateEndpoint = (req, res, next) => {

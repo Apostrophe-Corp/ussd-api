@@ -1,10 +1,14 @@
 const express = require("express");
+const User = require("../models/userModel");
 const {
   createUser,
   getUserBalance,
   createAdmin,
   transfer,
 } = require("../controllers/userController");
+const { createLoan } = require("../controllers/loanController");
+const { createSavings } = require("../controllers/savingsController");
+const { createAjo, getAjoData } = require("../controllers/ajoController");
 const { createWithdrawal } = require("../controllers/withdrawalController");
 const catchAsync = require("../utils/catchAsync");
 const router = express.Router();
@@ -15,6 +19,53 @@ const createUserTest = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     user: user,
+  });
+});
+
+const CreateAjoTest = catchAsync(async (req, res, next) => {
+  const { amount, count, period, phoneNumber } = req.body;
+  const user = await User.findOne({ phoneNumber });
+  const contributorCount = Number(count);
+  const contributionPeriod = Number(period);
+  const ajo = await createAjo(
+    contributionPeriod,
+    amount,
+    contributorCount,
+    user
+  );
+  res.status(200).json({
+    status: "success",
+    ajo: ajo,
+  });
+});
+
+const joinAjoTest = catchAsync(async (req, res, next) => {
+  const { ajoCode, phoneNumber } = req.body;
+  const user = await User.findOne({ phoneNumber });
+  const ajo = await joinAjo(ajoCode, user);
+  res.status(200).json({
+    status: "success",
+    ajo: ajo,
+  });
+});
+
+const createLoanTest = catchAsync(async (req, res, next) => {
+  const { amount, phoneNumber, duration } = req.body;
+  const user = await User.findOne({ phoneNumber });
+  const loan = await createLoan(user, amount, duration);
+  res.status(200).json({
+    status: "success",
+    loan: loan,
+  });
+});
+
+const createSavingsTest = catchAsync(async (req, res, next) => {
+  const { amount, phoneNumber, duration } = req.body;
+  const user = await User.findOne({ phoneNumber });
+  const savings = await createSavings(user, amount, duration);
+  res.status(200).json({
+    status: "success",
+    savings: savings,
   });
 });
 
@@ -45,6 +96,12 @@ const testWithdrawal = catchAsync(async (req, res, next) => {
   });
 });
 
-router.route("/test").post(createAdminUser);
+// router.route("/test").post(createAdminUser);
+router.route("/ajo").post(CreateAjoTest).patch(joinAjoTest);
+router.route("/loan").post(createLoanTest);
+router.route("/savings").post(createSavingsTest);
+router.route("/user").post(createUserTest);
+router.route("/transfer").post(testTransfer);
+router.route("/withdrawal").post(testWithdrawal);
 
 module.exports = router;
