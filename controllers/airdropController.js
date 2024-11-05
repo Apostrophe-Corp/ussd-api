@@ -300,11 +300,12 @@ const sendTokens = async () => {
           amount > 1 ? "s" : ""
         } as an airdrop from ${project.organizationName}`;
         note += ` #${Date.now()}-${Math.random()}`;
+        console.log("amount", amount);
 
         transactions.push({
           from: wallet.walletAddress,
           to: beneficiary.walletAddress,
-          amount: amount,
+          amount: project.amount,
           assetIndex: USDC_ASSET_ID,
           note,
         });

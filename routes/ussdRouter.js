@@ -11,6 +11,14 @@ const { showAsCurrency } = require("../utils/showAsCurrency");
 const { trimOverkill } = require("../utils/trimOverkill");
 const { createWithdrawal } = require("../controllers/withdrawalController");
 const { checkVendorExists } = require("../controllers/vendorController");
+const { createSavings } = require("../controllers/savingsController");
+const { createLoan } = require("../controllers/loanController");
+const {
+  createAjo,
+  joinAjo,
+  getAjoData,
+} = require("../controllers/ajoController");
+const INTEREST_RATE = 15;
 
 router.route("/ussd").post(async (req, res) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
@@ -215,10 +223,15 @@ router.route("/ussd").post(async (req, res) => {
               if (isLvl(1)) {
                 response = `CON Setup contribution rate:
                 1. Monthly
-                2. Weekly`;
+                2. Weekly
+                3. Daily`;
               } else if (isLvl(2)) {
                 const contributionRate = lastInput;
-                if (contributionRate !== "1" || contributionRate !== "2") {
+                if (
+                  contributionRate !== "1" ||
+                  contributionRate !== "2" ||
+                  contributionRate !== "3"
+                ) {
                   response = `END Invalid response.`;
                 } else {
                   response = `CON How many people would be in this Ajo group? (Must be more than 1)`;
@@ -236,7 +249,19 @@ router.route("/ussd").post(async (req, res) => {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
                 } else {
                   try {
-                    const ajoID = 0;
+                    const contributionPeriod =
+                      contributionRate == 1
+                        ? "monthly"
+                        : contributionRate == 2
+                          ? "weekly"
+                          : "daily";
+                    const user = await checkUserExists(phoneNumber);
+                    const ajoID = await createAjo(
+                      contributionPeriod,
+                      Number(amount),
+                      Number(groupSize),
+                      user
+                    );
                     response = `END Ajo group successfully created!
                     - Please save and share this Ajo ID to have others join you Ajo group:
                     - ${ajoID}`;
@@ -253,9 +278,8 @@ router.route("/ussd").post(async (req, res) => {
                 response = "CON Enter the Ajo ID you want to join:";
               } else if (isLvl(2)) {
                 const ajoID = lastInput;
-                const ajoIDExists = true;
-                if (ajoIDExists) {
-                  const ajoData = {};
+                const ajoData = await getAjoData(ajoID);
+                if (ajoData) {
                   const {
                     membersLeft = 0,
                     contributionAmount = 0,
@@ -279,7 +303,7 @@ router.route("/ussd").post(async (req, res) => {
                 }
               } else if (isLvl(4)) {
                 const pin = lastInput;
-                const pinIsValid = true;
+                const pinIsValid = await checkPinIsCorrect(phoneNumber, pin);
                 if (pinIsValid) {
                   try {
                     response = `END You've been added to the Ajo group.`;
@@ -295,15 +319,15 @@ router.route("/ussd").post(async (req, res) => {
             case "6":
               // Save - Ask for amount
               if (isLvl(1)) {
-                const interestRate = 0;
+                const interestRate = INTEREST_RATE;
                 response = `CON Enter the amount you want to save (+${interestRate}% Interest Yearly):`;
               } else if (isLvl(2)) {
                 const amount = trimOverkill(Number(lastInput), 2);
                 if (isNaN(amount)) {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
                 }
-                const balance = 0;
-                const balanceIsSufficient = true;
+                const balance = await getUserBalance(phoneNumber);
+                const balanceIsSufficient = balance >= amount;
                 if (balanceIsSufficient) {
                   response = `CON How long would you like to save this amount for?
                   1. 1 Week
@@ -346,9 +370,11 @@ router.route("/ussd").post(async (req, res) => {
                 }
               } else if (isLvl(4)) {
                 const pin = lastInput;
-                const pinIsValid = true;
+                const pinIsValid = await checkPinIsCorrect(phoneNumber, pin);
                 if (pinIsValid) {
                   try {
+                    const user = await checkUserExists(phoneNumber);
+                    await createSavings(user, amount, days);
                     response = `END Your savings have been secured.`;
                   } catch (error) {
                     response = `END Sorry we're unable to complete this action at this time.`;
@@ -361,32 +387,70 @@ router.route("/ussd").post(async (req, res) => {
 
             case "7":
               // Borrow - Ask for amount
-              const eligibleAmount = 0;
               if (isLvl(1)) {
-                if (eligibleAmount)
-                  response = `CON Enter the amount you want to borrow (Up to ${eligibleAmount} USD):`;
-                else response = `END You are not eligible for this service.`;
+                const interestRate = LOAN_INTEREST_RATE;
+                response = `CON Enter the amount you want to borrow (+${interestRate}% Interest Yearly):`;
               } else if (isLvl(2)) {
                 const amount = trimOverkill(Number(lastInput), 2);
                 if (isNaN(amount)) {
                   response = `END The amount entered isn't a valid numerical value. Let's try again shall we.`;
-                }
-                const balance = 0;
-                const isEligibleForAmount =
-                  trimOverkill(eligibleAmount, 2) >= amount;
-                if (isEligibleForAmount) {
-                  response = `CON Please enter your PIN to complete this action:`;
                 } else {
-                  response = `END Your eligible amount: ${sac(balance)} USD, is insufficient to request: ${sac(amount)} USD.`;
+                  const eligibleAmount = 150;
+                  const isEligibleForAmount = eligibleAmount >= amount;
+                  if (isEligibleForAmount) {
+                    response = `CON How long would you like to borrow this amount for?
+                                1. 1 Week
+                                2. 2 Weeks
+                                3. 3 Weeks
+                                4. 1 Month
+                                5. 2 Months
+                                6. 3 Months
+                                7. 6 Months
+                                8. 1 Year`;
+                  } else {
+                    response = `END Your eligible amount: ${sac(eligibleAmount)} USD, is insufficient to borrow: ${sac(amount)} USD.`;
+                  }
                 }
               } else if (isLvl(3)) {
+                const validators = {
+                  1: true,
+                  2: true,
+                  3: true,
+                  4: true,
+                  5: true,
+                  6: true,
+                  7: true,
+                  8: true,
+                };
+                if (!validators[lastInput]) {
+                  response = "END Invalid response";
+                } else {
+                  const durations = {
+                    1: 7,
+                    2: 14,
+                    3: 21,
+                    4: 30,
+                    5: 60,
+                    6: 90,
+                    7: 180,
+                    8: 365,
+                  };
+                  const days = durations[lastInput];
+                  response = `CON Please enter your PIN to complete this action:`;
+                }
+              } else if (isLvl(4)) {
                 const pin = lastInput;
-                const pinIsValid = true;
+                const pinIsValid = await checkPinIsCorrect(phoneNumber, pin);
                 if (pinIsValid) {
                   try {
-                    response = `END You have been credited with ${sac(Number(textArray[1]))} USD.`;
+                    const user = await checkUserExists(phoneNumber);
+                    const amount = Number(textArray[1]);
+                    const days = durations[textArray[2]];
+                    await createLoan(user, amount, days);
+                    response = `END Your loan of ${sac(amount)} USD for ${days} days has been approved and credited to your account.`;
                   } catch (error) {
-                    response = `END Sorry we're unable to complete this action at this time.`;
+                    console.error("Error creating loan:", error);
+                    response = `END Sorry, we're unable to complete this action at this time.`;
                   }
                 } else {
                   response = `END The PIN entered is incorrect.`;

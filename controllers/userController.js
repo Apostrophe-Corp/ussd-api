@@ -218,7 +218,7 @@ const checkPinIsCorrect = async (phoneNumber, pin) => {
   if (!user) {
     return false;
   }
-  return user.pin === pin;
+  return user.pin === Number(pin);
 };
 
 module.exports = {

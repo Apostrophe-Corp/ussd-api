@@ -16,11 +16,11 @@ const contributionSchema = new mongoose.Schema({
   },
   amountContributed: {
     type: Number,
-    required: true,
+    default: 0,
   },
   amountReceived: {
     type: Number,
-    required: true,
+    default: 0,
   },
   userID: {
     type: mongoose.Schema.Types.ObjectId,

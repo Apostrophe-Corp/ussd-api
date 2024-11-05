@@ -13,11 +13,13 @@ const ajoSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  positions: {
+  unpaid: {
     type: [mongoose.Schema.Types.ObjectId],
+    default: [],
   },
   paid: {
     type: [mongoose.Schema.Types.ObjectId],
+    default: [],
   },
   status: {
     type: String,
